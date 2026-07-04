@@ -1,0 +1,74 @@
+# 赤兔 · QA / 测试(test)
+
+> **优先级(项目 skill 让位)**:若当前项目已挂专属 `qa-testing` / `playmode-verify-iterate` skill → **以那些 skill 为准**,本 action 仅是没挂 skill 的项目的通用兜底,别两套并行。
+
+解决两个痛点:① 测试乱测边角、不测重点;② bug 散在对话里、纯自然语言、没 repro/日志/截图。
+赤兔能纯文件/CLI 做的:**定测试重点、强制 bug SOP、跑测+读结果、整理证据做三查**。
+
+按用户意图选其一(看 `$ARGUMENTS`):
+
+## A. 出一份"聚焦测试计划"(治"乱测边角")
+1. 读 `git diff` / `git log`(最近改动)+ 当前 Unity 项目档案 + **"本次重点"**。重点来源让勾哥当场选:
+   - **贴一句**给赤兔(最简单);或
+   - **从 Slack 读**:若已接 Slack MCP/连接器,赤兔直接读他指定的频道/线程提取本次重点(不用复制);
+   - 都没有 → 就从 git commit 信息推断,但提示可能不准。
+2. 用**风险 = 失败可能性 × 业务影响**排序,产出 **P0→P3** 测试清单:P0=本次改动触及的关键路径/高风险;边角 edge case 降到最后。
+3. 每条注明:测什么、为什么(关联哪个改动/文件/场景)、怎么测(手测步骤或对应的 PlayMode/EditMode 测试名)。
+4. 写到项目里 `QA/test-plan-<日期>.md`,让他照着测。**别一股脑列全量,聚焦重点。**
+
+## B. 强制 bug 报告 SOP(治"散、没证据")
+1. 项目里若没有,创建结构化模板:把 `${CLAUDE_SKILL_DIR}/templates/qa/bug-report.md` 和 `BUG-SOP.md` 复制到项目 `QA/`(或 `.github/ISSUE_TEMPLATE/bug.yml`)。
+2. 当用户/测试在对话里甩来一条自然语言 bug:**把它改写进模板**——标题、严重度 vs 优先级、复现步骤(编号、从已知状态起)、期望 vs 实际、环境(设备/系统/构建版本)、**证据(日志/截图/视频)**。
+3. **缺字段就挡回去**:明确列出"缺:复现步骤 / 日志 / 构建版本",要求补齐再立项。不接受三无报告。
+
+## C. 让游戏自动留证据(治"没日志/截图")
+- 把 `${CLAUDE_SKILL_DIR}/templates/qa/EvidenceCapture.cs` 介绍给用户、按需放进项目:它订阅 `Application.logMessageReceived` 写日志文件 + `ScreenCapture.CaptureScreenshot` + 抓 `Application.version`/`SystemInfo`/场景名到 JSON,一键打包。
+- 提醒:赤兔不能替他按 Play/出包/上真机;但证据落盘后,赤兔能读回来做三查。
+
+## D. 跑测 + 三查(triage)
+- **若接了 Unity MCP**(见 `integrations/unity-mcp/`,且 Unity 开着):直接 `run_tests`(EditMode/PlayMode)读 pass/fail、`read_console` 读报错——真·在引擎里验证。
+- **否则**(纯 CLI,需本机 Unity 编辑器 + license):`Unity -runTests -batchmode -projectPath . -testPlatform EditMode -testResults r.xml`(冒烟子集 `-testCategory Smoke`)。**别看退出码**(Unity 无统一约定),**解析 NUnit XML**。
+- 读 `Player.log` / `adb logcat` / NUnit XML,聚类失败,产出结构化报告(按 SOP)。
+- **报错 → 自己定位、修、重跑,到全绿为止**;别把没修绿的东西丢给勾哥手测(见 F)。
+- 没有以上条件就如实说"跑不了",别假装跑过。
+
+## E. 改老代码前先系"安全绳":行为快照测试(治"修一个 bug 坏六个")
+针对屎山/高耦合代码改动 —— 不是验证它"对不对",而是先**记录它现在的行为**,改完比对,**一动坏就当场报警**(业界叫 characterization test)。
+1. **先拍快照**:动手前,围绕"将要改的那块 + 它现在还正常的相邻功能",让 **Claude 自己写**几个 EditMode/PlayMode 测试,断言**当前的实际行为**(哪怕这行为本身不完美——先锁住现状)。
+2. **改完真跑**:有 Unity MCP 就 `run_tests` 真跑;**绿了才算修好**,红了说明碰坏了别处,立刻回头。
+3. **怎么不烦人(重要)**:
+   - **只对非琐碎 / 改到耦合处或关键路径的改动做**;琐碎、可逆、独立的小改**跳过**,别为它写测试拖慢手感。
+   - **Claude 自动写、自动跑**,勾哥只看结果——别把写测试甩给他(他不爱写测试)。
+   - 那块代码缠得太死、根本没法单独测出来 → **别硬写**:如实说"这块当前测不了",改用 `赤兔 评审` + 列一份手测步骤兜底,并记一条"这里缺测试覆盖"的欠账。
+
+## F. 安卓真机实测(可选;**全绿之后才问勾哥**)
+> 顺序很重要:**赤兔先自己测 + 自己修到全绿,才惊动勾哥;真机实测是锦上添花的可选项,不是用来抓基础 bug 的。**
+1. **先全绿(不打扰勾哥)**:逻辑+集成测试在电脑上跑(Coplay `run_tests`/`read_console`),报错自己定位修,**循环到全绿**。没绿之前别喊勾哥手测。
+2. **绿了再问一句**:"都测过了、全绿 ✅。**要不要在真机上实测一下?(可选)**" 勾哥说不用 → 直接交付收工。
+3. **他说要 → 第一次 guide**:教他插数据线、开「USB 调试」(步骤在 `integrations/android/SETUP.md`),`adb devices` 确认连上。
+4. **他在手机上玩,赤兔后台取证**:游戏里 `EvidenceCapture.cs` 在任何异常时自动把 截图 + 完整 log + 机型 存到手机;赤兔 `adb pull <persistentDataPath>/chitu-evidence` 拉回(没装 EvidenceCapture 就 `adb logcat -d` 抓栈)。
+5. **按 SOP 出真机 QA 报告**:逻辑/集成已绿,报告**聚焦真机特有问题(闪退/卡顿/触控/发热)**,别再混基础 bug;证据存 `QA/bugs/`。
+6. **手感项做成可交互**:把"要勾哥定的手感项"用 `${CLAUDE_SKILL_DIR}/templates/qa/feel-form.html`(原样嵌进报告 `</body>` 前;每项写成 `<div class="yd-feel" data-q="…">`)——勾哥对每项点 👍还行 / 👎要改 / 🤔不确定 + 写一句,点「提交反馈给赤兔」复制粘回。
+7. **反馈回流(联合优化)**:赤兔拿到反馈 → 拉 **art-director(数值)+ ui-ux(design)联合给优化建议**、**PM challenge** 收敛 → 给一份**最佳优化方案供勾哥定夺** → 勾哥拍板 → 赤兔**执行**(改 config 数值 / 走小闭环),只重跑相关那条验证。
+- 取证用的只读 adb(`devices`/`logcat`/`pull`)已自动放行、不弹审批;`adb shell` 等仍会问。
+- 诚实:手机只在"测 + 取证那会儿"连着(USB 或同 WiFi),平时不用一直连。
+
+## G. 性能 triage(卡顿/掉帧/GC 尖峰)
+> 前提:**接了 Coplay/Unity MCP** 才测得了;没接就明说"没接 MCP,性能只能靠代码静态看,测不了真实帧"。
+1. **取真实热点**(Play 中跑一段代表性玩法后):
+   - `get_worst_cpu_frames` → 最慢的几帧 + 调用栈;
+   - `get_worst_gc_frames` → GC 分配尖峰(掉帧元凶);
+   - `list_objects_with_high_polygon_count` → 面数大户(渲染/合批负担)。
+2. **聚类 top offenders**:把栈/分配归并成少数几个根源(哪个脚本每帧 new、哪个 Update 里 GetComponent/LINQ、哪个 mesh 面数爆),按影响排序,别逐帧念。
+3. **对照 `style/unity.md` 热路径规则给修法**:Update/FixedUpdate 里的分配与查找(§1)、GC(缓存/对象池)、过度 rebuild 的 Canvas(§6)、DOTween 每帧 new(§6)、高面数 → LOD/合批/减面。
+4. **改完复测同一段玩法**,用同样三个工具确认尖峰下去了(数字对比,别只说"应该好了")。
+- 没接 MCP 的降级:只做静态审查(照 unity.md 清单挑热路径嫌疑),并如实标"未在引擎实测"。
+
+## 文件去哪、怎么跟公司配合(归档口径)
+- **测试计划** → 项目内 `QA/test-plan-<日期>.md`。
+- **bug 报告** → 项目内 `QA/bugs/<日期>-<短标题>.md`;若公司用 Jira/GitHub Issues,改写进对应模板**贴过去**,赤兔不擅自建外部工单。
+- **证据**(日志/截图)→ `EvidenceCapture.cs` 默认存到 `Application.persistentDataPath/chitu-evidence/`;附进 bug 报告时拷到 `QA/bugs/` 同名目录。
+- **赤兔的"教训"(可复用经验)进 ~/.chitu**,**项目相关产物进项目仓库**——两者分开,不混。
+
+## 原则
+- 聚焦重点,不堆边角;不编造测过/日志;报告必须可复现+带证据。

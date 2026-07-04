@@ -1,0 +1,153 @@
+'use strict';
+// 赤兔 · playtest 冻帧标注处理流水线(纯 Node,无第三方依赖)。
+//   勾哥在 Unity 里按 F8 标注 → 每条一个 marker 文件夹(shot.png + context.json + voice.wav? + note.txt?)。
+//   本脚本:批量补转没当场确认的语音(Google STT)+ 把 打字补充 / 转写 / 上下文 合成一份清单 → 赤兔据此出问题清单。
+//
+// 设计(诚实):
+//   · 扫 marker、读 context、合并文本、出 manifest —— 确定性,可单测。
+//   · 语音转写走 Google Cloud STT(integrations/playtest-capture/stt_google.py,Chirp 3);多数标注已在 Unity 当场确认(note.txt),这里只补转没确认的。
+//     没装 Python / 没设 GOOGLE_APPLICATION_CREDENTIALS → 不报错,降级:有打字就用打字,没有就标"仅截图+上下文"。
+//
+// 用法:
+//   node scripts/playtest.js [session目录]     # 不给=自动取 QA/playtest 最新一场
+//   node scripts/playtest.js --no-asr [目录]   # 跳过语音转写(只用打字+上下文)
+//   node scripts/playtest.js --help
+
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+function die(m) { console.error('[赤兔 playtest] ' + m); process.exit(1); }
+function log(m) { console.log('[赤兔 playtest] ' + m); }
+
+function findPython() {
+  // 显式指定优先(用了 venv / py 启动器 / 非默认 python 时设 CHITU_PYTHON)
+  if (process.env.CHITU_PYTHON) return process.env.CHITU_PYTHON;
+  for (const p of ['python', 'python3', 'py']) {
+    try { if (spawnSync(p, ['--version'], { encoding: 'utf8' }).status === 0) return p; } catch {}
+  }
+  return null;
+}
+
+// 调 Google STT(Chirp 3)批量转写,返回 { wavAbsPath: text }。仅兜底"录制时没当场确认过的"语音。
+function transcribeAll(wavs, skillDir) {
+  const out = {};
+  if (!wavs.length) return out;
+  const py = findPython();
+  const script = path.join(skillDir, 'integrations', 'playtest-capture', 'stt_google.py');
+  if (!py || !fs.existsSync(script)) {
+    log('⚠️ 未找到 Python 或 stt_google.py → 跳过语音转写(降级:用打字/上下文)。配置见 SETUP.md');
+    return out;
+  }
+  // 认证:service account JSON(GOOGLE_APPLICATION_CREDENTIALS)或 gcloud ADC,二者皆可;都没有则脚本会自报错、本函数降级。
+  log(`Google STT 转写 ${wavs.length} 段(没在 Unity 当场确认的)…`);
+  const r = spawnSync(py, [script, ...wavs], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (r.status !== 0) {
+    log('⚠️ 转写失败(降级):' + ((r.stderr || '').split('\n').find(Boolean) || 'unknown'));
+    return out;
+  }
+  for (const line of (r.stdout || '').split('\n')) {
+    const s = line.trim(); if (!s) continue;
+    try { const o = JSON.parse(s); if (o.wav) out[o.wav] = o.text || ''; } catch {}
+  }
+  return out;
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log([
+      '赤兔 playtest 冻帧标注处理',
+      '  node scripts/playtest.js [session目录]   自动取 QA/playtest 最新一场',
+      '  node scripts/playtest.js --no-asr [目录]  跳过语音转写',
+    ].join('\n'));
+    return;
+  }
+  const noAsr = args.includes('--no-asr');
+  const positional = args.filter(a => !a.startsWith('--'));
+  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const skillDir = process.env.CLAUDE_SKILL_DIR || path.resolve(__dirname, '..');
+
+  // 定位 session
+  let session = positional[0];
+  const ptDir = path.join(projectDir, 'QA', 'playtest');
+  if (!session) {
+    if (!fs.existsSync(ptDir)) die('没找到 QA/playtest,先在 Unity 里按 F8 标注几条。');
+    const sessions = fs.readdirSync(ptDir)
+      .filter(f => /^session-/.test(f) && fs.statSync(path.join(ptDir, f)).isDirectory())
+      .map(f => ({ f, t: fs.statSync(path.join(ptDir, f)).mtimeMs }))
+      .sort((a, b) => b.t - a.t);
+    if (!sessions.length) die('QA/playtest 里没有标注 session。');
+    session = path.join(ptDir, sessions[0].f);
+  }
+  if (!fs.existsSync(session)) die('session 不存在:' + session);
+  log('处理 session:' + path.relative(projectDir, session));
+
+  // 收集 marker
+  const markers = fs.readdirSync(session)
+    .filter(f => /^marker-/.test(f) && fs.statSync(path.join(session, f)).isDirectory())
+    .sort()
+    .map(f => {
+      const dir = path.join(session, f);
+      const ctxPath = path.join(dir, 'context.json');
+      let ctx = {}; try { ctx = JSON.parse(fs.readFileSync(ctxPath, 'utf8')); } catch {}
+      const wav = fs.existsSync(path.join(dir, 'voice.wav')) ? path.join(dir, 'voice.wav') : null;
+      let typed = ''; try { typed = fs.readFileSync(path.join(dir, 'note.txt'), 'utf8').trim(); } catch {}
+      return { name: f, dir, ctx, wav, typed };
+    });
+  if (!markers.length) die('这一场没有 marker 文件夹。');
+  log(`收集到 ${markers.length} 条标注。`);
+
+  // 跨项目护栏:每条 marker 落盘时记录了来源项目(Unity 工程文件夹名)。一场里混入多个来源项目 =
+  // EditorPrefs "Chitu.Playtest.SessionRoot"(全机全局键)被某项目指到了共享目录(如 Google Drive),把别的项目的标注也写进了同一处。
+  const projects = [...new Set(markers.map(m => (m.ctx.project || '').trim()).filter(Boolean))];
+  const here = path.basename(projectDir);
+  if (projects.length > 1) {
+    log(`⚠️ 文件串项目:这一场混入了多个来源项目 [${projects.join(', ')}]。`);
+    log(`   成因:Unity 的 EditorPrefs "Chitu.Playtest.SessionRoot" 是全机全局键,某项目把它指到了共享目录,别的项目的标注也写进了同一处。`);
+    log(`   修复:非 ER 项目在 Unity「⚙ 转写设置」把 SessionRoot 留空(走工程内 QA/playtest 自动隔离),或每个项目各指独立目录。`);
+  } else if (projects.length === 1) {
+    log(`来源项目:${projects[0]}` + (projects[0] !== here ? `(当前处理目录 ${here};两者本就不同名可忽略)` : ''));
+  }
+
+  // 转写:只补转"录制时没当场确认过文字"的(有 note.txt = 勾哥在 Unity 里已转写+确认,直接用,不重转免重复)
+  const wavs = noAsr ? [] : markers.filter(m => m.wav && !m.typed).map(m => m.wav);
+  const trans = transcribeAll(wavs, skillDir);
+  if (!noAsr && markers.some(m => m.typed)) log(`其中 ${markers.filter(m => m.typed).length} 条已在 Unity 里当场转写确认,直接采用。`);
+
+  // 合成清单
+  const items = markers.map(m => {
+    const said = m.wav ? (trans[m.wav] || '') : '';
+    const note = [said, m.typed].filter(Boolean).join(' / ');
+    return {
+      marker: m.name,
+      project: m.ctx.project || '',   // 来源项目(跨项目护栏)
+      shot: path.relative(projectDir, path.join(m.dir, 'context.json')).replace(/context\.json$/, 'shot.png'),
+      scene: m.ctx.scene || '?',
+      hitPath: m.ctx.hitPath || '',
+      hitSource: m.ctx.hitSource || '',
+      resolution: m.ctx.resolution || '',
+      fps: m.ctx.fps,
+      version: m.ctx.version || '',
+      timeInGame: m.ctx.timeInGame,
+      said,           // 语音转写
+      typed: m.typed, // 打字补充
+      note,           // 合并后的"勾哥说的"
+    };
+  });
+
+  const manifest = { session: path.relative(projectDir, session), project: projects.length === 1 ? projects[0] : projects, count: items.length, items };
+  fs.writeFileSync(path.join(session, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+  // 给赤兔的速览(它再 Read 每张 shot.png 出问题清单)
+  console.log('\n──────── 赤兔请按此处理 ────────');
+  console.log('session:' + path.relative(projectDir, session) + '  ·  ' + items.length + ' 条标注');
+  for (const it of items) {
+    console.log(`\n[${it.marker}] 场景 ${it.scene} · ${it.hitPath || '(无命中)'}${it.hitSource ? ' ← ' + it.hitSource : ''}`);
+    console.log('  截图:' + it.shot);
+    console.log('  勾哥:' + (it.note || '(无语音/打字 — 仅截图+上下文)'));
+  }
+  console.log('\n下一步:逐条 Read shot.png 看画面,结合"勾哥说的 + 命中元素路径"出带定位的问题清单 → 映射脚本/Prefab → 走联合优化回流。');
+}
+
+main();

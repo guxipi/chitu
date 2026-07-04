@@ -1,0 +1,25 @@
+{
+  "_comment": "由 chitu-record 维护。每条 = 一个可确定性拦截的硬规则,被 PreToolUse hook(scripts/pre-tool-use.js)读取。字段:pattern(ERE 扩展正则,对 tool_input 所有字符串值匹配)、reason(命中时告诉模型的原因)、tools(适用工具数组,如 [\"Bash\",\"PowerShell\",\"Write\",\"Edit\"],或 [\"*\"] 表示全部)。deny 永远优先于自动放行。",
+  "_example": {
+    "pattern": "\\bDebug\\.Log\\(",
+    "reason": "调试输出请用项目封装的 Logger,不要用 Debug.Log(教训 L-0003)",
+    "tools": ["Write", "Edit", "MultiEdit"]
+  },
+  "_company_extension_slots": "在公司机按项目补以下类型的硬拦截(不预置公司专有路径,避免瞎猜——红线②):① secret 明文=匹配 API key/token/私钥明文写入;② 核心目录外传=针对上传/外部云 MCP 工具(tools 填该工具名)匹配核心脚本路径子串;③ 序列化文件重写守卫=tools:[\"Write\",\"Edit\"] + 匹配不该被脚本重写的 .prefab/.unity/.asset 路径。样例见 _company_examples_disabled(改好路径后挪进 rules 生效)。",
+  "_company_examples_disabled": [
+    { "pattern": "(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)", "reason": "疑似明文密钥/私钥,禁止写入代码库(红线⑬)", "tools": ["Write", "Edit", "MultiEdit"] },
+    { "pattern": "Assets/(Scripts/)?(Combat|Battle|AntiCheat|NetSync|Economy)/", "reason": "核心/敏感目录内容禁止经外部 API 外传(数据本地化,红线⑬)", "tools": ["mcp__EXTERNAL_UPLOAD_TOOL_NAME"] }
+  ],
+  "rules": [
+    {
+      "pattern": "\\bgit\\s+(-[A-Za-z]+\\s+\\S+\\s+)*push\\b",
+      "reason": "赤兔:禁止 git push 到远端(commit 可,合入远端共享分支由勾哥手动完成 —— 红线⑦)",
+      "tools": ["Bash", "PowerShell"]
+    },
+    {
+      "pattern": "\\bgit\\s+(-[A-Za-z]+\\s+\\S+\\s+)*merge\\b",
+      "reason": "赤兔:禁止 git merge(合入共享分支由勾哥手动完成 —— 红线⑦)",
+      "tools": ["Bash", "PowerShell"]
+    }
+  ]
+}

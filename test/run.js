@@ -154,6 +154,15 @@ t('4 个角色镜头存在且 frontmatter name 正确', () => {
     assert(new RegExp('name:\\s*' + n + '\\b').test(fs.readFileSync(f, 'utf8')), n + ' frontmatter name 不对');
   }
 });
+t('提速子代理 executor/scout 存在且 frontmatter 正确;scout 只读', () => {
+  for (const n of ['executor', 'scout']) {
+    const f = path.join(ROOT, 'agents', n + '.md');
+    assert(fs.existsSync(f), '缺子代理 ' + n);
+    assert(new RegExp('name:\\s*' + n + '\\b').test(fs.readFileSync(f, 'utf8')), n + ' frontmatter name 不对');
+  }
+  const scout = fs.readFileSync(path.join(ROOT, 'agents', 'scout.md'), 'utf8');
+  assert(/disallowedTools:.*Write.*Edit.*NotebookEdit/.test(scout), 'scout 应禁写工具(只读)');
+});
 t('SKILL 路由含 mockup', () => {
   assert(/actions\/mockup\.md/.test(fs.readFileSync(path.join(ROOT, 'SKILL.md'), 'utf8')), 'SKILL 缺 mockup 路由');
 });
@@ -542,14 +551,33 @@ t('0.2 git 可写子命令:纯查询放行、创建/改写回落(撞红线⑧)',
   assert(preToolDecision({ tool_name: 'Bash', tool_input: { command: 'git remote -v' } }) === 'allow', 'git remote -v 应放行');
   assert(preToolDecision({ tool_name: 'Bash', tool_input: { command: 'git tag' } }) === 'allow', 'git tag 列表应放行');
 });
-t('0.3 hooks.json PreToolUse 覆盖 PowerShell;PS 只走 deny 不自动放行', () => {
+t('0.3 hooks.json PreToolUse 覆盖 PowerShell;deny 层先行拦危险 PS', () => {
   const h = JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks', 'hooks.json'), 'utf8'));
   assert(/\bPowerShell\b/.test(h.hooks.PreToolUse[0].matcher), 'PreToolUse matcher 应含 PowerShell');
   const pb = path.join(TMP, 'psbrain', '.chitu');
   fs.mkdirSync(path.join(pb, '.meta'), { recursive: true });
   fs.writeFileSync(path.join(pb, '.meta', 'hook-rules.json'), JSON.stringify({ rules: [{ pattern: 'Remove-Item.*-Recurse', reason: '危险删除', tools: ['*'] }] }));
   assert(preToolDecision({ tool_name: 'PowerShell', tool_input: { command: 'Remove-Item -Recurse -Force x' } }, { CHITU_HOME: pb }) === 'deny', 'PS 危险命令应被 deny 层拦(blob 收集不挑字段名)');
-  assert(preToolDecision({ tool_name: 'PowerShell', tool_input: { command: 'Get-ChildItem' } }) === 'defer', 'PS 一律不自动放行,回落审批');
+});
+t('0.3b PowerShell 只读放行:cmdlet/别名/管道/git;写与混淆一律 defer', () => {
+  const a = cmd => preToolDecision({ tool_name: 'PowerShell', tool_input: { command: cmd } });
+  // 放行:只读 cmdlet / 只读管道 / PS 下 git 查询 / 别名
+  assert(a('Get-ChildItem -Recurse') === 'allow', 'Get-ChildItem -Recurse 应放行');
+  assert(a('Get-Content foo.cs | Select-String "TODO"') === 'allow', '只读管道应放行');
+  assert(a('git status') === 'allow', 'PS 下 git status 应放行(复用 git 子命令校验)');
+  assert(a('Test-Path x') === 'allow', 'Test-Path 应放行');
+  assert(a('ls') === 'allow', '别名 ls 应放行');
+  assert(a('cat foo.cs') === 'allow', '别名 cat 应放行');
+  // 拒绝(defer):分号串写、scriptblock、子表达式、call operator、iex、重定向、非白名单 cmdlet、裸删
+  assert(a('Get-Content x; Remove-Item y') === 'defer', '分号串 Remove-Item 应 defer');
+  assert(a('Get-ChildItem | ForEach-Object { Remove-Item $_ }') === 'defer', 'scriptblock {} 应 defer');
+  assert(a('echo $(Remove-Item x)') === 'defer', '子表达式 $() 应 defer');
+  assert(a('& evil.exe') === 'defer', 'call operator & 应 defer');
+  assert(a('iex "rm x"') === 'defer', 'iex 应 defer');
+  assert(a('Get-Content x > out.txt') === 'defer', '重定向 > 应 defer');
+  assert(a('Invoke-Expression "rm x"') === 'defer', 'Invoke-Expression 应 defer');
+  assert(a('Set-Content x y') === 'defer', 'Set-Content(非白名单)应 defer');
+  assert(a('Remove-Item x') === 'defer', '裸 Remove-Item 应 defer');
 });
 t('0.4 MCP allow 整词匹配:forget/budget 不因含 get 被误放', () => {
   assert(preToolDecision({ tool_name: 'mcp__x__forget_cache', tool_input: {} }) === 'defer', 'forget_cache 不该因子串 get 放行');

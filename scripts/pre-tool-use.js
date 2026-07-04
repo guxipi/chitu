@@ -23,6 +23,8 @@ const DEFAULT_ALLOW = {
   bashSafe: ['cd', 'ls', 'pwd', 'cat', 'head', 'tail', 'grep', 'egrep', 'fgrep', 'rg', 'find', 'echo', 'printf', 'which', 'type', 'wc', 'file', 'stat', 'tree', 'dirname', 'basename', 'realpath', 'date', 'whoami', 'hostname', 'uname', 'env', 'sort', 'uniq', 'cut', 'column', 'diff', 'cmp', 'git', 'adb'],
   gitSafe: ['status', 'diff', 'log', 'show', 'branch', 'remote', 'blame', 'rev-parse', 'describe', 'tag', 'ls-files', 'shortlog', 'config', 'cat-file', 'for-each-ref', 'symbolic-ref', 'reflog'],
   adbSafe: ['devices', 'logcat', 'pull', 'get-state', 'bugreport', 'version', 'start-server', 'kill-server'], // 只读/取证;shell·exec-out·install 等不放行(会落到正常审批)
+  // PowerShell 只读/导航 cmdlet + 别名(段首 token 白名单;git/adb 走各自子命令校验,不列此)。where/Where-Object 不放(scriptblock 已一票否决,别名本身也别放)。
+  psSafe: ['Get-ChildItem', 'Get-Content', 'Get-Item', 'Get-ItemProperty', 'Get-Location', 'Get-Date', 'Get-Command', 'Get-Member', 'Get-Host', 'Get-Process', 'Get-Service', 'Test-Path', 'Resolve-Path', 'Select-String', 'Select-Object', 'Measure-Object', 'Sort-Object', 'Compare-Object', 'Format-Table', 'Format-List', 'Format-Wide', 'Out-String', 'Set-Location', 'Split-Path', 'Join-Path', 'Write-Output', 'Write-Host', 'ls', 'dir', 'gci', 'cat', 'gc', 'type', 'gi', 'gp', 'gl', 'pwd', 'cd', 'sl', 'echo', 'select', 'sls', 'measure', 'sort', 'ft', 'fl'],
 
   mcpAllow: ['read', 'get', 'list', 'search', 'console', 'log', 'describe', 'inspect', 'snapshot', 'query', 'info', 'status', 'fetch', 'test', 'find', 'view', 'show', 'count'],
   mcpDeny: ['manage', 'create', 'delete', 'write', 'update', 'modify', 'remove', 'rename', 'move', 'execute', 'exec', 'install', 'build', 'kill', 'stop', 'restart', 'run_command', 'set_', 'add_', 'apply', 'commit', 'push', 'reset', 'checkout', 'clean'],
@@ -46,6 +48,30 @@ function collect(v, out) {
   return out;
 }
 
+// git 子命令校验(Bash 段 / PowerShell 段共用)。toks[verbIdx]==='git':跳过全局选项找子命令,
+// 子命令须在 gitSafe 白名单;可写子命令(config/branch/tag/remote/reflog)出现位置参数或写标志 → 判写形态。
+function gitSubSafe(toks, verbIdx, gitSafe) {
+  let j = verbIdx + 1;
+  while (j < toks.length && toks[j].startsWith('-')) { if (toks[j] === '-C' || toks[j] === '-c') j++; j++; } // 跳过全局选项(-C/-c 带参)
+  const sub = toks[j];
+  if (!sub || !gitSafe.has(sub)) return false;
+  if (GIT_WRITE_SUBS.has(sub)) {
+    for (let k = j + 1; k < toks.length; k++) {
+      const t = toks[k];
+      if (!t.startsWith('-')) return false;      // 位置参数 = 写形态(create/set/rename/delete)
+      if (GIT_WRITE_FLAGS.test(t)) return false; // 显式写标志(-d/-m/--add/--unset…)
+    }
+  }
+  return true;
+}
+// adb 子命令校验(Bash 段 / PowerShell 段共用)。只放只读取证子命令;shell/exec-out/install 等落回审批。
+function adbSubSafe(toks, verbIdx, adbSafe) {
+  let j = verbIdx + 1;
+  while (j < toks.length && toks[j].startsWith('-')) { if (toks[j] === '-s') j++; j++; } // 跳过 -s <serial>/-d/-e 等选项
+  const sub = toks[j];
+  return !!sub && adbSafe.has(sub);
+}
+
 // Bash 安全判定:整条命令拆成简单命令段(按 | && || ; & 切),每段首词都得在白名单;
 // 有命令替换 $()/反引号、或输出重定向 > 即不放行(可能藏写操作/任意命令)。git 还要校验子命令。
 function isSafeBash(cmd, conf) {
@@ -67,27 +93,38 @@ function isSafeBash(cmd, conf) {
     // find/sort 在白名单里,但它们有写形态:find -delete/-exec/-ok/-fprint*/-fls、sort -o(写文件)→ 回落审批
     if (verb === 'find' && rest.some(t => /^-delete$|^-exec|^-ok|^-fprint|^-fls$/.test(t))) return false;
     if (verb === 'sort' && rest.some(t => t === '-o' || /^-o./.test(t) || /^--output/.test(t))) return false;
-    if (verb === 'git') {
-      let j = i + 1;
-      while (j < toks.length && toks[j].startsWith('-')) { if (toks[j] === '-C' || toks[j] === '-c') j++; j++; } // 跳过全局选项(-C/-c 带参)
-      const sub = toks[j];
-      if (!sub || !gitSafe.has(sub)) return false;
-      // 可写子命令(config/branch/tag/remote/reflog)只在"纯查询"时放行:出现位置参数(分支名/配置值/tag 名/remote 名)
-      // 或显式写标志 → 回落审批(git branch <名> 会建分支,撞红线⑧)。
-      if (GIT_WRITE_SUBS.has(sub)) {
-        for (let k = j + 1; k < toks.length; k++) {
-          const t = toks[k];
-          if (!t.startsWith('-')) return false;      // 位置参数 = 写形态(create/set/rename/delete)
-          if (GIT_WRITE_FLAGS.test(t)) return false; // 显式写标志(-d/-m/--add/--unset…)
-        }
-      }
-    }
-    if (verb === 'adb') {
-      let j = i + 1;
-      while (j < toks.length && toks[j].startsWith('-')) { if (toks[j] === '-s') j++; j++; } // 跳过 -s <serial>/-d/-e 等选项
-      const sub = toks[j];
-      if (!sub || !adbSafe.has(sub)) return false; // 只放只读取证子命令;shell/exec-out/install 等落回审批
-    }
+    // git 可写子命令(config/branch/tag/remote/reflog)只在"纯查询"时放行,出现位置参数/写标志 → 回落审批(git branch <名> 会建分支,撞红线⑧)。
+    if (verb === 'git' && !gitSubSafe(toks, i, gitSafe)) return false;
+    if (verb === 'adb' && !adbSubSafe(toks, i, adbSafe)) return false;
+  }
+  return true;
+}
+
+// PowerShell 安全判定:安全模型同 isSafeBash —— 拿不准就 defer,宁可让勾哥点一下。
+// 一票否决:> 重定向写文件(含 2>$null 从严)/ $() 子表达式 / {} scriptblock / 反引号转义 / iex·invoke-expression·invoke-command。
+// 再按 ; | && || 换行切段:段首以 & 或 . 开头(call operator / dot-source)一律拒;段首 token 须在 psSafe 白名单;
+// git/adb 段首复用 Bash 的子命令校验。注:{} 一票否决顺带拒掉 Where-Object/ForEach-Object/计算属性,接受这个代价。
+function isSafePwsh(cmd, conf) {
+  if (!cmd || typeof cmd !== 'string') return false;
+  if (/>/.test(cmd)) return false;                                  // 重定向写文件(含 2>$null,从严)
+  if (/\$\(/.test(cmd)) return false;                               // 子表达式可藏任意命令
+  if (/\{/.test(cmd)) return false;                                 // scriptblock 可藏任意命令
+  if (/`/.test(cmd)) return false;                                  // 反引号转义/续行,可混淆
+  if (/\biex\b|invoke-expression|invoke-command/i.test(cmd)) return false;
+  const psSafe = new Set((conf.psSafe || []).map(s => s.toLowerCase()));
+  const gitSafe = new Set(conf.gitSafe || []);
+  const adbSafe = new Set(conf.adbSafe || []);
+  const segs = cmd.split(/\r?\n|&&|\|\||\||;/).map(s => s.trim()).filter(Boolean);
+  if (!segs.length) return false;
+  for (const seg of segs) {
+    const toks = seg.split(/\s+/).filter(Boolean);
+    const verb = toks[0];
+    if (!verb) return false;
+    if (verb.startsWith('&') || verb.startsWith('.')) return false; // call operator / dot-source
+    const low = verb.toLowerCase();
+    if (low === 'git') { if (!gitSubSafe(toks, 0, gitSafe)) return false; continue; }
+    if (low === 'adb') { if (!adbSubSafe(toks, 0, adbSafe)) return false; continue; }
+    if (!psSafe.has(low)) return false;
   }
   return true;
 }
@@ -134,6 +171,7 @@ try {
   let ok = false;
   if ((allowConf.tools || []).includes(tool)) ok = true;
   else if (tool === 'Bash') ok = isSafeBash(ti.command, allowConf);
+  else if (tool === 'PowerShell') ok = isSafePwsh(ti.command, allowConf);
   else if (/^mcp__/.test(tool)) ok = isSafeMcp(tool, allowConf);
   if (ok) emit('allow', '赤兔放行(只读/安全操作,免审批)');
 

@@ -93,6 +93,8 @@ const exists = p => { try { return fs.existsSync(p); } catch { return false; } }
   const adb = (process.env.PATH || '').split(path.delimiter).some(dir => exists(path.join(dir, 'adb.exe')) || exists(path.join(dir, 'adb')));
   add(adb ? '✅' : 'ℹ️', 'adb(可选)', adb ? '在 PATH。' : '未在 PATH(只有安卓真机 QA 才需要)。');
   add('ℹ️', 'Coplay/STT(可选)', 'MCP/语音转写按需配;此处不自动探测,连不上时查各自 integrations/SETUP.md。');
+  add('ℹ️', 'fast mode(可选)', 'Opus 用户交互开发建议开 /fast 提升输出速度;无持久化设置键,每会话手动开。');
+  add('ℹ️', '批量切模型(可选)', '大批机械改动/批量重构可临时切 Sonnet(/model 或 settings.json 的 "model" 键)提速,干完切回。');
 })();
 
 // 输出

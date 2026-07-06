@@ -2,6 +2,14 @@
 
 > 精选高亮日志(非逐版本穷举)。最新在上。
 
+### v0.1.2 — 2026-07-06 反 AI 撒谎三件套(诚实性机制化)+ 版本号重置
+- **版本号重置**:此前沿用翼德 fork 时的 0.5x 序列,自本版起赤兔按自己的节奏从 0.1.x 计。已装 0.52.0 的机器升级后 SessionStart 走"大脑戳领先→只打戳"分支跳过 migrate,本版改动全在插件侧脚本,拉新即生效,无大脑迁移需求。
+- **背景**:AI 执行时会假装接通服务端、写欺骗性注释("// simulate for now")、catch 吞错伪装成功;prompt 红线拦不住训练出的完成压力,把验收信道从"模型自述"切到"运行时证据"。移植自翼德 v0.54.0,逻辑一字不动,品牌换赤兔。
+- **① executor 证据契约**(`agents/executor.md`):汇报固定四段(结论/改动清单/验收逐条带输出原文/偏离与欠账)+ 诚实契约(UNVERIFIED/BLOCKED 是合格出口,伪造成功是最高违规)。
+- **② honesty lint**(`lint-unity.js`,PostToolUse):`honesty-fake-comment` + `honesty-swallowed-catch` 两条欺骗指纹规则,`always:true` 不受 expertLevel 过滤,test/mock/coplaytemp 路径跳过防误报。
+- **③ Stop/SubagentStop 收尾审计**(`scripts/stop-audit.js` 新建 + hooks.json 注册):最终汇报含完成/通过声明但通篇零验证工具调用 → block 一次质询;`(?<!un)verified` 放过合规 UNVERIFIED 标注,`stop_hook_active` 防死循环,异常一律静默放行。
+- 测试 51→64 全绿。
+
 ### v0.52.0 — 2026-07-04 提速但不降质
 让套着赤兔的 Claude Code 在不损害把关质量的前提下更快完成任务。
 

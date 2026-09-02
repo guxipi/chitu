@@ -12,7 +12,7 @@
 - **版本同步**:插件版本 vs 大脑 `plugin-version.txt`。不一致 → 下次开会话自动 migrate;有冲突跑 `赤兔 update`。
 - **skill 预算**:`SLASH_COMMAND_TOOL_CHAR_BUDGET` 是否 ≥40000。没配 → 长 skill 描述会被**静默截断**(技能不触发)。修:`~/.claude/settings.json` 的 `"env"` 里加 `"SLASH_COMMAND_TOOL_CHAR_BUDGET": "40000"`。
 - **本机私有状态**:`~/.chitu-local` 目录(会话级易变状态落点)。首次会话自动建,不算错。
-- **Unity SmartMerge**:`.gitconfig` 是否配 `unityyamlmerge`。没配 → scene/prefab 冲突只能手撕。修:见 `integrations/unity-smartmerge/SETUP.md`。
+- **Unity SmartMerge**:`.gitconfig` 是否配 `unityyamlmerge`。没配 → scene/prefab 冲突只能手撕。修:见 `<赤兔根>/integrations/unity-smartmerge/SETUP.md`。
 - **可选项**:adb / Coplay MCP / STT —— 只报未配置,不算错(按需才配)。
 
 ## 铁律

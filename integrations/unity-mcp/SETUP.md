@@ -59,4 +59,4 @@ claude mcp add --scope user --transport stdio coplay-mcp --env MCP_TOOL_TIMEOUT=
 - **版本**:CoplayDev 还在快速迭代,`@latest` 可能和 Unity 包版本漂移;真出问题就在 Package Manager 里更新包、或 pin 一个版本。
 - 不想用了:`/mcp` 里禁用,或 `claude mcp remove coplay-mcp`。赤兔自动退回静态把关。
 
-> **连不上 / 没生效?** 先跑一次 **赤兔 体检**(`node scripts/doctor.js`)自查,再深挖。
+> **连不上 / 没生效?** 先跑一次 **赤兔 体检**(`node <插件目录>/scripts/doctor.js`)自查,再深挖。

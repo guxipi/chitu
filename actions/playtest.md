@@ -9,8 +9,8 @@
 **① F8 开始录音 → ② 测/说出问题(中文) → ③ F8 停录(屏上自动出字,看一眼对不对、不对就改)→ ④ F8 保存 → 继续玩。** 不想说话就直接在框里打字。测完回 Claude Code 说"赤兔 playtest",其余赤兔全包。**别让勾哥做任何额外手动操作。**
 
 ## 首次:确认配好(没配先 guide,别假装能转写)
-见 `integrations/playtest-capture/SETUP.md`(一次性):
-1. 把 `templates/qa/PlaytestMarker.cs` 放进项目 Scripts 目录;`templates/qa/Editor/PlaytestMarkerWindow.cs` 和 `templates/qa/Editor/PlaytestAsrServer.cs` 放进任意 `Editor/` 文件夹。(自动在 Play 时生成,不用手挂;`#if UNITY_EDITOR(||DEVELOPMENT_BUILD)` 包住,不进正式包。)
+见 `<赤兔根>/integrations/playtest-capture/SETUP.md`(一次性):
+1. 把 `<赤兔根>/templates/qa/PlaytestMarker.cs` 放进项目 Scripts 目录;`<赤兔根>/templates/qa/Editor/PlaytestMarkerWindow.cs` 和 `<赤兔根>/templates/qa/Editor/PlaytestAsrServer.cs` 放进任意 `Editor/` 文件夹。(自动在 Play 时生成,不用手挂;`#if UNITY_EDITOR(||DEVELOPMENT_BUILD)` 包住,不进正式包。)
 2. 转写走 **Google Cloud STT(Chirp 3)**:GCP 建项目+开结算+启用 Speech-to-Text API+下 service account JSON,`pip install google-cloud-speech`(轻量、无 PyTorch);在标注窗口「⚙ 转写设置」指一次 `stt_google.py` + JSON 路径(见 SETUP 2)。**没配也能用**,降级成"只用打字 + 上下文",事后 `赤兔 playtest` 在 `GOOGLE_APPLICATION_CREDENTIALS` 已设时批量补转。
 3. 隐私:录的是麦克风,**全程本地处理、不外传**;不想录就只打字。
 

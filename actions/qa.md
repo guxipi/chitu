@@ -26,7 +26,7 @@
 - 提醒:赤兔不能替他按 Play/出包/上真机;但证据落盘后,赤兔能读回来做三查。
 
 ## D. 跑测 + 三查(triage)
-- **若接了 Unity MCP**(见 `integrations/unity-mcp/`,且 Unity 开着):直接 `run_tests`(EditMode/PlayMode)读 pass/fail、`read_console` 读报错——真·在引擎里验证。
+- **若接了 Unity MCP**(见 `<赤兔根>/integrations/unity-mcp/`,且 Unity 开着):直接 `run_tests`(EditMode/PlayMode)读 pass/fail、`read_console` 读报错——真·在引擎里验证。
 - **否则**(纯 CLI,需本机 Unity 编辑器 + license):`Unity -runTests -batchmode -projectPath . -testPlatform EditMode -testResults r.xml`(冒烟子集 `-testCategory Smoke`)。**别看退出码**(Unity 无统一约定),**解析 NUnit XML**。
 - 读 `Player.log` / `adb logcat` / NUnit XML,聚类失败,产出结构化报告(按 SOP)。
 - **报错 → 自己定位、修、重跑,到全绿为止**;别把没修绿的东西丢给勾哥手测(见 F)。
@@ -45,7 +45,7 @@
 > 顺序很重要:**赤兔先自己测 + 自己修到全绿,才惊动勾哥;真机实测是锦上添花的可选项,不是用来抓基础 bug 的。**
 1. **先全绿(不打扰勾哥)**:逻辑+集成测试在电脑上跑(Coplay `run_tests`/`read_console`),报错自己定位修,**循环到全绿**。没绿之前别喊勾哥手测。
 2. **绿了再问一句**:"都测过了、全绿 ✅。**要不要在真机上实测一下?(可选)**" 勾哥说不用 → 直接交付收工。
-3. **他说要 → 第一次 guide**:教他插数据线、开「USB 调试」(步骤在 `integrations/android/SETUP.md`),`adb devices` 确认连上。
+3. **他说要 → 第一次 guide**:教他插数据线、开「USB 调试」(步骤在 `<赤兔根>/integrations/android/SETUP.md`),`adb devices` 确认连上。
 4. **他在手机上玩,赤兔后台取证**:游戏里 `EvidenceCapture.cs` 在任何异常时自动把 截图 + 完整 log + 机型 存到手机;赤兔 `adb pull <persistentDataPath>/chitu-evidence` 拉回(没装 EvidenceCapture 就 `adb logcat -d` 抓栈)。
 5. **按 SOP 出真机 QA 报告**:逻辑/集成已绿,报告**聚焦真机特有问题(闪退/卡顿/触控/发热)**,别再混基础 bug;证据存 `QA/bugs/`。
 6. **手感项做成可交互**:把"要勾哥定的手感项"用 `<赤兔根>/templates/qa/feel-form.html`(原样嵌进报告 `</body>` 前;每项写成 `<div class="yd-feel" data-q="…">`)——勾哥对每项点 👍还行 / 👎要改 / 🤔不确定 + 写一句,点「提交反馈给赤兔」复制粘回。

@@ -6,11 +6,14 @@
 
 ## 步骤
 
-1. **盘点**:读取 `~/.chitu/INDEX.md`、`lessons/` 下所有 `L-*.md`、以及 `notes/inbox/`(手机/随手扔进来的原始笔记,若有;note 动作也理这里)。
+1. **盘点**:读取 `~/.chitu/INDEX.md` 和 `lessons/` 下所有 `L-*.md`。
 
-   同时用 Bash 跑一次同步盘冲突副本巡检(大脑在 Google Drive/Dropbox,多机同天写会留冲突副本):
+   `notes/inbox/` **不归这里消费**——那是随手记,归 note 动作(它整理完会把原件移进 `notes/inbox/_done/`,收件箱计数才会归零)。consolidate 只瞄一眼有没有积压:有就提醒勾哥"随手记还压着 N 条,要不要顺手跑一次笔记整理(读 `<赤兔根>/actions/note.md`)",**别在这里另起一套读它**,否则两个动作抢同一批笔记、计数还永远清不掉。
+
+   同时用 Bash 跑一次冲突副本巡检:
    `node "<赤兔根>/scripts/conflict-scan.js"`
-   有输出 `CONFLICTS` 就把清单**念给勾哥裁决**(留哪份/删哪份),别自作主张删。
+   赤兔大脑在本机本地时它会打一行 `SKIP` 直接跳过(**这是正常的,不是坏了**);只有大脑被放进 Google Drive / Dropbox 才真扫。
+   输出 `CONFLICTS` 就把清单**念给勾哥裁决**(留哪份/删哪份),别自作主张删。
 
 2. **两阶段对账**(借鉴 mem0 的 ADD/UPDATE/DELETE/NOOP)。对每条候选/已有记忆判定:
    - **ADD**:新的、不重复 → 保留/新建。
@@ -26,7 +29,7 @@
 
 6. **修订索引**:更新 `INDEX.md` 使其与现状一致;确认它仍在 ≤200 行的预算内。
 
-7. **归档与重建索引**:把 `status: archived/superseded` 的 lesson 移到 `~/.chitu/lessons/archive/`(运行时不再扫,保持活跃集精简);然后运行
+7. **归档与重建索引**:把 `status: archived/superseded` 的 lesson 移到 `~/.chitu/lessons/archive/`(运行时不再扫,保持活跃集精简;**目录不在就先建**,老大脑里没有这一层);然后运行
    `node "<赤兔根>/scripts/build-index.js"` 重建编译索引。
 
 8. **打整理时间戳**:用 Bash 工具运行

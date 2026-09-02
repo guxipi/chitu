@@ -2,6 +2,18 @@
 
 > 精选高亮日志(非逐版本穷举)。最新在上。
 
+### v0.1.4 — 2026-09-02 清掉 fork 遗留的路径坑 + consolidate 的空转与越界
+
+接着 v0.1.3 往下扫,五处都是同一类毛病:文档写的路径,模型或勾哥照着跑会扑空。
+
+- **语音启动器双击必炸**:fork 时改了文件内容没改文件名——磁盘上还是 `yide_voice.py` / `yide-voice.bat` / `yide-voice-silent.vbs`,而 .bat、.vbs 和全部文档引用的都是 `chitu_voice.py`。三个文件改名归位,`voice.md` 的启动/自检命令与 SETUP 引用改成 `<赤兔根>` 绝对路径。
+- **`node scripts/guid-find.js` 裸相对路径**:`actions/ui.md` 和 `skills/unstuck-playbook/SKILL.md` 各一份,在业务工程 cwd 下必然 Cannot find module。改成 `<赤兔根>` 绝对路径。(注意 skill 里的 `${CLAUDE_SKILL_DIR}` 指的是 skill 自己的目录、不是插件根,所以这里只能用 `<赤兔根>`。)
+- **conflict-scan 在赤兔上纯空转、还会误报**:赤兔大脑本来就在本机本地,同步盘副本不可能存在,却每次 consolidate 都扫一遍;`name (N).ext` 那条正则更会把"想法 (2).md"这种正常笔记当成冲突。现在 CLI 先判大脑在不在同步盘(复用 detect-sync 的候选根),不在就打一行 `SKIP` 走人(`--force` 可强扫);数字副本要**同目录原件还在**才算副本。测试同步更新。
+- **`lessons/archive/` 没人创建**:consolidate 步骤 7 让把归档挪过去,可模板里根本没这层。模板补 `lessons/archive/README.md`(git 不跟踪空目录),老大脑升级时 migrate 会自动补上;步骤 7 也补一句"目录不在就先建"。
+- **consolidate 和 note 抢同一批笔记**:v0.1.3 把步骤 1 的 inbox 路径改对之后,consolidate 会读 `notes/inbox/` 却从不处置,而 note 动作整理完是要把原件移进 `_done/` 的——两边重复消费,"随手记有 N 条"还永远清不了零。现在划清:inbox 归 note,consolidate 只瞄一眼积压、提醒去跑 note。
+
+顺手清同类:`plan.md` 跨动作跳转、各处 `见 integrations/*/SETUP.md`、`playtest.md` 的 `templates/qa/*.cs` 等 11 处面向模型的相对路径统一加 `<赤兔根>/`;7 份 SETUP.md 与 doctor.js 输出里给人看的相对路径标明"插件目录"。测试 64 全绿。
+
 ### v0.1.3 — 2026-09-02 修 consolidate 路径三连(每次会话都报"整理有问题"的根因)
 
 症状:公司机器上赤兔几乎每次会话都说 consolidate 有问题。三个成因叠在一起:

@@ -22,7 +22,7 @@
 ## B. 整理 inbox(扔进来的原始笔记)
 > 笔记怎么进来(赤兔大脑本地,默认直接落本地 inbox):
 > - **本地(默认)**:直接往 `~/.chitu/notes/inbox/` 丢 `.md`/`.txt`。
-> - **可选手机通道**:若勾哥另配了外部 inbox(如 Telegram bot / 某个中转文件夹,见 `integrations/telegram/SETUP.md`),路径存指针 `~/.chitu-inbox-location`;不用就忽略。
+> - **可选手机通道**:若勾哥另配了外部 inbox(如 Telegram bot / 某个中转文件夹,见 `<赤兔根>/integrations/telegram/SETUP.md`),路径存指针 `~/.chitu-inbox-location`;不用就忽略。
 1. **(若配了外部 inbox)先搬进大脑**:读 `~/.chitu-inbox-location` 拿路径 → 把里面 `.md`/`.txt` 搬进 `~/.chitu/notes/inbox/`,搬完在源侧移到 `_pulled/`(避免重复搬)。没指针 / 不可达 → 跳过,只理已在 inbox 的。
 2. 读 `~/.chitu/notes/inbox/` 下所有文件。
 3. 每条:判断主题、关联项目、抽 tags、定时间(文件时间或内容里的日期)。

@@ -22,7 +22,7 @@
 5. 在 `~/.chitu/projects/<项目>.md` 的「📚 项目文档」记:space 范围、镜像路径、精简层文件(CLAUDE.md/AGENTS.md)、**本次同步时间**。
 
 ## B. 增量保鲜(要 token)
-- 读 `~/.chitu/.meta/confluence.json` `{site,email,token,spaceKey}`(勾哥配一次,见 `integrations/confluence/SETUP.md`);没有就提示去配,或退回"重新导出一次"。
+- 读 `~/.chitu/.meta/confluence.json` `{site,email,token,spaceKey}`(勾哥配一次,见 `<赤兔根>/integrations/confluence/SETUP.md`);没有就提示去配,或退回"重新导出一次"。
 - 走 REST API 只拉**自上次同步以来改动过的页**(按 `version.when`)→ 更新镜像 + **增量并进 `CLAUDE.md`**(consolidate 式去重,不全量重写)。
 - **限流 / token 失效 → 降级用现有镜像 + 明说"拉不到最新"**,不卡死。
 

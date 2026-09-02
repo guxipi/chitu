@@ -4,6 +4,8 @@
 > 前提:假设项目已接 **Coplay / Unity MCP**(把关与验证以引擎事实为准)。没接 MCP 时明说"只能凭文本猜、没在引擎里验过",别假装跑过。
 > **优先级**:若当前项目已挂专属 `ui-placement` skill → **以那个 skill 为准**,本 action 仅是没挂 skill 的项目的通用兜底,别两套并行。
 
+> 下文命令/路径里的 `<赤兔根>` = 赤兔插件根目录的绝对路径(SessionStart 简报开头那行"赤兔插件根:"给了,照抄它的正斜杠写法)。执行前先替换,它不是环境变量。
+
 ## 0. 先读项目约定,再动手(别拿一个项目的习惯套另一个)
 按顺序拿"这个项目怎么做 UI"的真值,**项目本地约定永远覆盖本文件的通用值**:
 1. **chitu 项目档案**:读 `~/.chitu/projects/<当前项目>.md` 的「🎨 UI/UX 设计预设」(屏幕方向 / 参考分辨率·安全区 / UI 框架 / 美术基调 / 控件约定 / 确认线稿)+ `unity-context` 技术事实。
@@ -64,7 +66,7 @@ gradient / metallic / glow 来自套件的 9-slice 精灵(uGUI 没原生 box-sha
 
 ## 9. 视效重做到"成品级"(指针)
 > 若项目挂了专属 UI 视效 skill → **以它为准**,本节不重复(双源必漂移)。未挂 skill 的项目用下面 5 行通用要点兜底:
-- **配方来自 dump,不肉眼猜**:kit preview 只选方向;真施工图 = dump 同名 demo prefab 每节点的 sprite/type/tint/rect/字号照抄;素材靠 GUID 反查(`node scripts/guid-find.js <asset路径|GUID> <项目根>` 列出谁引用它)+ 像素采样定性(可染基底 / 描边框 / 能否 Sliced)。
+- **配方来自 dump,不肉眼猜**:kit preview 只选方向;真施工图 = dump 同名 demo prefab 每节点的 sprite/type/tint/rect/字号照抄;素材靠 GUID 反查(`node "<赤兔根>/scripts/guid-find.js" <asset路径|GUID> <项目根>` 列出谁引用它)+ 像素采样定性(可染基底 / 描边框 / 能否 Sliced)。
 - **视觉语言**:状态即 tint;层叠固定序 `Bg → 高光/底纹 → 描边 → Glow → 图标 → 文字`;复用 kit 组件家族;"当前/可点"必须活。
 - **动效三段式(DOTween)**:光效 ramp → 主体 punch(OutBack)→ 内容 stagger;持续层旋转光圈/glow 呼吸;全 `.SetUpdate(true)`、tween 记账必 `Kill()`、入场动画限量。
 - **工程化**:builder 进 editor setup + `Rebuild` 菜单;prefab 同路径覆盖保 GUID;重建后 grep 日志零 "not found"。

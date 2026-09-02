@@ -394,20 +394,26 @@ t('1.4 顶层 catch 给降级简报而非静默 exit;SessionStart timeout ≥15s
   const h = JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks', 'hooks.json'), 'utf8'));
   assert(h.hooks.SessionStart[0].hooks[0].timeout >= 15, 'SessionStart timeout 应 ≥15s');
 });
-t('1.5 冲突副本巡检:命中英文/中文/数字去重,跳过 archive', () => {
-  const { findConflicts, isConflictName } = require(path.join(SCRIPTS, 'conflict-scan.js'));
+t('1.5 冲突副本巡检:标记副本命中、数字副本要原件还在、跳过 archive、本地大脑不算同步盘', () => {
+  const { findConflicts, isConflictName, numberedDupOrigin, isSyncedPath } = require(path.join(SCRIPTS, 'conflict-scan.js'));
   assert(isConflictName('identity (conflicted copy 2026-07-02).md'), '英文冲突副本');
   assert(isConflictName('教训的冲突副本.md'), '中文冲突副本');
-  assert(isConflictName('note (1).md'), '数字去重副本');
+  assert(!isConflictName('note (1).md'), '光看名字不判数字副本(会误伤正常笔记)');
+  assert(numberedDupOrigin('note (1).md') === 'note.md', '数字副本能推出原件名');
   assert(!isConflictName('normal.md'), '正常文件不命中');
   const cb = path.join(TMP, 'conflictbrain');
   fs.mkdirSync(path.join(cb, 'lessons', 'archive'), { recursive: true });
+  fs.mkdirSync(path.join(cb, 'notes', 'inbox'), { recursive: true });
   fs.writeFileSync(path.join(cb, 'lessons', 'L-x (1).md'), 'x');
+  fs.writeFileSync(path.join(cb, 'lessons', 'L-x.md'), 'x');   // 原件还在 → 上面那份才算副本
   fs.writeFileSync(path.join(cb, 'lessons', 'L-y.md'), 'y');
+  fs.writeFileSync(path.join(cb, 'notes', 'inbox', '想法 (2).md'), 'n');  // 没有原件 = 正常笔记
   fs.writeFileSync(path.join(cb, 'lessons', 'archive', 'old (conflicted copy).md'), 'z');
   const hits = findConflicts(cb).map(p => path.basename(p));
-  assert(hits.includes('L-x (1).md'), '应命中活跃区冲突副本');
+  assert(hits.includes('L-x (1).md'), '原件还在的数字副本应命中');
+  assert(!hits.includes('想法 (2).md'), '没有原件的 (N) 是正常笔记,不该误报');
   assert(!hits.some(h => /old/.test(h)), 'archive 区应跳过');
+  assert(!isSyncedPath(cb), '本机临时目录不算同步盘(CLI 会跳过巡检)');
 });
 
 // === 8e. 文档一致性 + skill 引用体检(2026-07-02 audit Phase 3)===

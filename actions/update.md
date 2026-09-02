@@ -5,7 +5,7 @@
 ## 步骤
 
 1. **跑迁移引擎(安全部分自动应用)**:Bash 运行
-   `node "${CLAUDE_SKILL_DIR}/scripts/migrate.js" --apply`
+   `node "<赤兔根>/scripts/migrate.js" --apply`
    它返回一段 JSON 报告:`{ added[], refreshed[], conflicts[], rulesToAdd[] }`,并已自动:
    - **added**:用户缺的新文件 → 已新增;
    - **refreshed**:发货知识文件(如 `style/unity.md`)且用户没改过 → 已刷新到新版。
@@ -13,7 +13,7 @@
 2. **报告自动部分**:把 added / refreshed 简短念给用户(让他知道补了什么)。
 
 3. **冲突(conflicts):逐个问用户**。这些是"发货文件,但用户改过、上游也更新了"。对每个:
-   - 用 Read 把"用户版"和插件模板版(`${CLAUDE_SKILL_DIR}/templates/brain/<file>`)对比给用户看关键差异;
+   - 用 Read 把"用户版"和插件模板版(`<赤兔根>/templates/brain/<file>`)对比给用户看关键差异;
    - 问他:**保留我的 / 换成新版 / 手动合并**(默认保留用户的)。
    - 按选择用 Edit/Write 处理;**不要替他擅自决定**。
 

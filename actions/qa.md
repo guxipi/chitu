@@ -17,12 +17,12 @@
 4. 写到项目里 `QA/test-plan-<日期>.md`,让他照着测。**别一股脑列全量,聚焦重点。**
 
 ## B. 强制 bug 报告 SOP(治"散、没证据")
-1. 项目里若没有,创建结构化模板:把 `${CLAUDE_SKILL_DIR}/templates/qa/bug-report.md` 和 `BUG-SOP.md` 复制到项目 `QA/`(或 `.github/ISSUE_TEMPLATE/bug.yml`)。
+1. 项目里若没有,创建结构化模板:把 `<赤兔根>/templates/qa/bug-report.md` 和 `BUG-SOP.md` 复制到项目 `QA/`(或 `.github/ISSUE_TEMPLATE/bug.yml`)。
 2. 当用户/测试在对话里甩来一条自然语言 bug:**把它改写进模板**——标题、严重度 vs 优先级、复现步骤(编号、从已知状态起)、期望 vs 实际、环境(设备/系统/构建版本)、**证据(日志/截图/视频)**。
 3. **缺字段就挡回去**:明确列出"缺:复现步骤 / 日志 / 构建版本",要求补齐再立项。不接受三无报告。
 
 ## C. 让游戏自动留证据(治"没日志/截图")
-- 把 `${CLAUDE_SKILL_DIR}/templates/qa/EvidenceCapture.cs` 介绍给用户、按需放进项目:它订阅 `Application.logMessageReceived` 写日志文件 + `ScreenCapture.CaptureScreenshot` + 抓 `Application.version`/`SystemInfo`/场景名到 JSON,一键打包。
+- 把 `<赤兔根>/templates/qa/EvidenceCapture.cs` 介绍给用户、按需放进项目:它订阅 `Application.logMessageReceived` 写日志文件 + `ScreenCapture.CaptureScreenshot` + 抓 `Application.version`/`SystemInfo`/场景名到 JSON,一键打包。
 - 提醒:赤兔不能替他按 Play/出包/上真机;但证据落盘后,赤兔能读回来做三查。
 
 ## D. 跑测 + 三查(triage)
@@ -48,7 +48,7 @@
 3. **他说要 → 第一次 guide**:教他插数据线、开「USB 调试」(步骤在 `integrations/android/SETUP.md`),`adb devices` 确认连上。
 4. **他在手机上玩,赤兔后台取证**:游戏里 `EvidenceCapture.cs` 在任何异常时自动把 截图 + 完整 log + 机型 存到手机;赤兔 `adb pull <persistentDataPath>/chitu-evidence` 拉回(没装 EvidenceCapture 就 `adb logcat -d` 抓栈)。
 5. **按 SOP 出真机 QA 报告**:逻辑/集成已绿,报告**聚焦真机特有问题(闪退/卡顿/触控/发热)**,别再混基础 bug;证据存 `QA/bugs/`。
-6. **手感项做成可交互**:把"要勾哥定的手感项"用 `${CLAUDE_SKILL_DIR}/templates/qa/feel-form.html`(原样嵌进报告 `</body>` 前;每项写成 `<div class="yd-feel" data-q="…">`)——勾哥对每项点 👍还行 / 👎要改 / 🤔不确定 + 写一句,点「提交反馈给赤兔」复制粘回。
+6. **手感项做成可交互**:把"要勾哥定的手感项"用 `<赤兔根>/templates/qa/feel-form.html`(原样嵌进报告 `</body>` 前;每项写成 `<div class="yd-feel" data-q="…">`)——勾哥对每项点 👍还行 / 👎要改 / 🤔不确定 + 写一句,点「提交反馈给赤兔」复制粘回。
 7. **反馈回流(联合优化)**:赤兔拿到反馈 → 拉 **art-director(数值)+ ui-ux(design)联合给优化建议**、**PM challenge** 收敛 → 给一份**最佳优化方案供勾哥定夺** → 勾哥拍板 → 赤兔**执行**(改 config 数值 / 走小闭环),只重跑相关那条验证。
 - 取证用的只读 adb(`devices`/`logcat`/`pull`)已自动放行、不弹审批;`adb shell` 等仍会问。
 - 诚实:手机只在"测 + 取证那会儿"连着(USB 或同 WiFi),平时不用一直连。

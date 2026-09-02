@@ -3,7 +3,7 @@
 出问题时别只会"找咕鸡"——先自诊断。一屏 ✅/⚠️/❌ + 每项修复指引。
 
 ## 怎么做
-1. 用 Bash 跑:`node "${CLAUDE_SKILL_DIR}/scripts/doctor.js"`
+1. 用 Bash 跑:`node "<赤兔根>/scripts/doctor.js"`
 2. 把输出**原样念给勾哥**,再对 ❌/⚠️ 项给一句人话解释 + 下一步。
 
 ## 检查项(doctor.js 覆盖)

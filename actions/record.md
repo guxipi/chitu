@@ -21,7 +21,7 @@
 
 5. **写入**:基于 `~/.chitu/lessons/_TEMPLATE.md` 写 `~/.chitu/lessons/L-XXXX.md`,填好 frontmatter(id / date 用今天 / severity / scope / enforce / status: active)与三段正文。
 
-6. **更新索引**:在 `~/.chitu/INDEX.md` 的 lessons 段加一行:`- [L-XXXX](lessons/L-XXXX.md) [sev:N] — 一句话`;然后用 Bash 运行 `node "${CLAUDE_SKILL_DIR}/scripts/build-index.js"` 重建编译索引(供把关器快速按文件匹配)。
+6. **更新索引**:在 `~/.chitu/INDEX.md` 的 lessons 段加一行:`- [L-XXXX](lessons/L-XXXX.md) [sev:N] — 一句话`;然后用 Bash 运行 `node "<赤兔根>/scripts/build-index.js"` 重建编译索引(供把关器快速按文件匹配)。
 
 7. **按 severity 升级**:
    - **severity ≥ 8**:把该规则同时追加到 `~/.chitu/core/hard-rules.md`(永远带,全平台软层生效)。
@@ -31,7 +31,7 @@
 8. **确认**:把写好的 lesson + (若有)hook 规则念给用户,告诉他"已记录,下次起生效"。
 
 ## 收尾(写了大脑就同步)
-- 落盘后跑 `node "${CLAUDE_SKILL_DIR}/scripts/brain-git.js" sync "记教训:<简述>"`:大脑是 git 仓则自动 commit+push(工具自身数据持久化,受红线⑧定向豁免,别回头问权限);非 git 大脑自动 no-op。
+- 落盘后跑 `node "<赤兔根>/scripts/brain-git.js" sync "记教训:<简述>"`:大脑是 git 仓则自动 commit+push(工具自身数据持久化,受红线⑧定向豁免,别回头问权限);非 git 大脑自动 no-op。
 
 ## 原则
 - 措辞先给用户确认再落盘。

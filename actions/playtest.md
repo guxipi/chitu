@@ -20,7 +20,7 @@
 3. 测完,回 Claude Code 说"**赤兔 playtest**"。
 4. 赤兔跑(写文件,过一次审批):
    ```
-   node ${CLAUDE_SKILL_DIR}/scripts/playtest.js
+   node "<赤兔根>/scripts/playtest.js"
    ```
    (不带参=自动取 `QA/playtest` 最新一场;`--no-asr` 跳过转写。)它会:**补转**那些录制时没当场确认过文字的语音(已在 Unity 里确认的直接用 `note.txt`,不重转)+ 合并 + 读 `context.json` → 写 `manifest.json` + 打印速览。
 5. 赤兔**逐条 Read `shot.png`** 看画面,结合"勾哥说的(语音转写+打字)+ 命中元素路径"→ 出**带定位问题清单**:`[marker-03] 现象 → BattleHUD/TopBar/PauseBtn ← PauseButton.prefab(场景 Battle)→ 类型(UI/手感/逻辑/性能)`。

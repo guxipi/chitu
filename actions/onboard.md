@@ -9,7 +9,7 @@
 
 1. **选大脑放哪(本地;选择题,别让用户敲命令行)**:
    - 用 **AskUserQuestion** 给两个选项:**本地默认 `~/.chitu`(推荐)** / **自定义本地路径**(想放某个盘,如 `D:\chitu-brain`,让他粘一个**本地**路径)。**不放同步盘 / 不进 git**——公司数据留本地。
-   - 建大脑(跨平台):默认 → 无参数 `node "${CLAUDE_SKILL_DIR}/scripts/install-brain.js"`;自定义 → `node "${CLAUDE_SKILL_DIR}/scripts/install-brain.js" "<本地文件夹>/chitu-brain"`。
+   - 建大脑(跨平台):默认 → 无参数 `node "<赤兔根>/scripts/install-brain.js"`;自定义 → `node "<赤兔根>/scripts/install-brain.js" "<本地文件夹>/chitu-brain"`。
    - 输出 `CREATED\t...` → 已建好(位置写进指针 `~/.chitu-location`),继续访谈;`EXISTS\t...` → 已存在,直接进访谈补充;`ERROR\t...` → 念给用户。
    (脚本用 Node `fs.cpSync` 不依赖 `cp`/`ls`;无需环境变量。)
 

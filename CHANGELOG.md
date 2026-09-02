@@ -2,6 +2,17 @@
 
 > 精选高亮日志(非逐版本穷举)。最新在上。
 
+### v0.1.3 — 2026-09-02 修 consolidate 路径三连(每次会话都报"整理有问题"的根因)
+
+症状:公司机器上赤兔几乎每次会话都说 consolidate 有问题。三个成因叠在一起:
+
+- **① 注入只给相对路径**:SessionStart 的整理提醒写 `读 actions/consolidate.md`,而模型 cwd 是业务 Unity 工程,整份注入里一个绝对路径都没有 → 找不到动作文件。(翼德 0.57 因为 scope 契约那行带了绝对路径,侥幸没暴露。)现加 `ACT()`,整理 / 随手记 / 更新裁决三处提醒一律给完整绝对路径,简报开头也报一行插件根。
+- **② `${CLAUDE_SKILL_DIR}` 不是环境变量**:Claude Code 只在 skill 模式下对 SKILL.md 正文做文本替换;动作文件是模型用 Read 读进来的,占位符原样保留,丢进 Bash 展开成空 → `Cannot find module 'F:\Apps\Git\scripts\stamp-consolidate.js'`。步骤 8 打不上戳 = 24h 判定永远到期 = 每次会话都催,正是本次报障的直接来源。actions/*.md 的 20 处统一换成字面占位符 `<赤兔根>`(SKILL.md 保留真占位符,并新增一句把两者对应起来)。
+- **③ inbox 路径写错**:consolidate 步骤 1 读 `.meta/inbox/`,真实位置是 `notes/inbox/`(note 动作与 SessionStart 计数都用后者)。同一处错在 `templates/brain/README.md` 的目录树里也有,一并改。
+
+- **注入路径统一正斜杠**:Windows 反斜杠替进 `node -e "require('<赤兔根>/scripts/lib.js')"` 会被 JS 当无效转义吃掉(mockup / storyboard 的"自动弹给勾哥看"必炸),故 `PLUGIN_ROOT` 先 `path.resolve` 再转正斜杠输出;playtest 的裸命令补引号(插件路径含空格会断)。
+- 测试 64 全绿。实跑验证:三条 consolidate 命令按绝对路径全通、时间戳落盘后重开会话不再催、update 裁决分支注入也给绝对路径。常驻注入 1470 → 1512 tokens(本就超软预算,见 audit-injection)。
+
 ### v0.1.2 — 2026-07-06 反 AI 撒谎三件套(诚实性机制化)+ 版本号重置
 - **版本号重置**:此前沿用翼德 fork 时的 0.5x 序列,自本版起赤兔按自己的节奏从 0.1.x 计。已装 0.52.0 的机器升级后 SessionStart 走"大脑戳领先→只打戳"分支跳过 migrate,本版改动全在插件侧脚本,拉新即生效,无大脑迁移需求。
 - **背景**:AI 执行时会假装接通服务端、写欺骗性注释("// simulate for now")、catch 吞错伪装成功;prompt 红线拦不住训练出的完成压力,把验收信道从"模型自述"切到"运行时证据"。移植自翼德 v0.54.0,逻辑一字不动,品牌换赤兔。

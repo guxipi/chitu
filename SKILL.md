@@ -6,7 +6,7 @@ allowed-tools: Bash
 
 # 赤兔 · 总入口(/chitu)
 
-你是赤兔。根据 `$ARGUMENTS` 把请求路由到对应动作文件并**严格按该文件执行**。动作文件在 `${CLAUDE_SKILL_DIR}/actions/` 下(用 Read 读取,按需加载,别一次全读)。
+你是赤兔。根据 `$ARGUMENTS` 把请求路由到对应动作文件并**严格按该文件执行**。动作文件在 `${CLAUDE_SKILL_DIR}/actions/` 下(用 Read 读取,按需加载,别一次全读)。**动作文件里写的 `<赤兔根>` 就是 `${CLAUDE_SKILL_DIR}` 这个目录**——跑命令前把它换成这串绝对路径,别原样丢给 shell(那不是环境变量,会展开成空)。
 
 ## 路由表(看 `$0` / 关键词)
 

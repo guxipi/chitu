@@ -6,8 +6,8 @@
 ## A. 捕获 —— 自动 + 静默 + 带质量门(不再每条问他)
 在一个任务收尾时,评估**刚才用户那条 prompt** 是否值得长期复用:
 - **质量门(≥2 个信号才存)**:① 几轮内就搞定 ② 用户明确满意("对了/完美/就这样")③ 产出没返工 ④ 这类措辞反复出现过。
-- **去重**:先看 `prompts/index.json`,已有近似的就**别新建**,改跑 `node "${CLAUDE_SKILL_DIR}/scripts/prompts.js" use <slug>`(uses+1)。
-- 达标且新颖 → **静默存**:写 `~/.chitu/prompts/<slug>.md`(schema 见下),然后 `node "${CLAUDE_SKILL_DIR}/scripts/prompts.js" index` 重建索引。**只回一行**:"已把这条收进库:〈名字〉,不要就说删掉。"——不打断、不要他确认。
+- **去重**:先看 `prompts/index.json`,已有近似的就**别新建**,改跑 `node "<赤兔根>/scripts/prompts.js" use <slug>`(uses+1)。
+- 达标且新颖 → **静默存**:写 `~/.chitu/prompts/<slug>.md`(schema 见下),然后 `node "<赤兔根>/scripts/prompts.js" index` 重建索引。**只回一行**:"已把这条收进库:〈名字〉,不要就说删掉。"——不打断、不要他确认。
 - 拿不准质量 → 宁可不存(避免垃圾污染库,否则他会不信任)。
 
 ## B. 召回 —— 自动(由 UserPromptSubmit hook 负责,你无需做事)

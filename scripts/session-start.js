@@ -21,8 +21,13 @@ function verLt(a, b) {
 }
 
 const BRAIN = brainDir();
-const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..');
+const PLUGIN_ROOT = path.resolve(process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..'));
 const PROJECT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+// 注入给模型的路径一律正斜杠:Windows 反斜杠进 `node -e "require('…')"` 会被当转义吃掉(\G/\c 无效转义 → Cannot find module)。
+const SLASH = (p) => String(p).replace(/\\/g, '/');
+const ROOT_TXT = SLASH(PLUGIN_ROOT);
+// 动作文件一律给完整绝对路径:模型的 cwd 是业务工程,注入里写 actions/xxx.md 它找不到。
+const ACT = (f) => SLASH(path.join(PLUGIN_ROOT, 'actions', f));
 
 function emit(ctx, title) {
   process.stdout.write(JSON.stringify({
@@ -96,7 +101,8 @@ try {
   try { syncExperts(); } catch {}
 
   let ctx = '# 🐎 赤兔简报 — 个人上下文中枢\n' +
-    '以下是关于当前用户的持久上下文。请全程遵守,尤其 hard-rules;需要细节就读 ~/.chitu 下对应文件,不要猜。\n';
+    '以下是关于当前用户的持久上下文。请全程遵守,尤其 hard-rules;需要细节就读 ~/.chitu 下对应文件,不要猜。\n' +
+    `赤兔插件根:\`${ROOT_TXT}\`(动作 <赤兔根>/actions/*.md、脚本 <赤兔根>/scripts/*.js)。文档里的 \`<赤兔根>\` 执行前换成这串(照抄正斜杠,别改回反斜杠)——它不是环境变量,原样丢 shell 会展开成空。\n`;
   if (pullWarn) ctx += `\n---\n## ⚠️ 大脑同步\ngit pull 失败(${pullWarn}),本机大脑可能落后其他机器;联网后手动 \`git -C <大脑目录> pull --ff-only\`。\n`;
 
   // 永远带:身份(用户层)+ 红线 + 工作准则(发货默认 + 用户层,resolver 在"读取时"合并,不写盘)
@@ -115,7 +121,7 @@ try {
   // 随手记 inbox:只报未整理条数(手机扔进来的笔记)
   let nInbox = 0;
   try { nInbox = fs.readdirSync(path.join(BRAIN, 'notes', 'inbox')).filter(n => !n.startsWith('.') && !n.startsWith('_')).length; } catch {}
-  if (nInbox) ctx += `\n---\n## 📥 随手记\n收件箱有 ${nInbox} 条未整理的笔记。合适时机执行一次笔记整理(note 动作:读 actions/note.md),或提醒勾哥说"赤兔 整理笔记"。\n`;
+  if (nInbox) ctx += `\n---\n## 📥 随手记\n收件箱有 ${nInbox} 条未整理的笔记。合适时机执行一次笔记整理(note 动作:读 \`${ACT('note.md')}\`),或提醒勾哥说"赤兔 整理笔记"。\n`;
 
   // --- Unity 项目档案:自动探测版本/管线/输入系统/Addressables/脚本后端 ---
   let unity = null;
@@ -132,9 +138,9 @@ try {
   } catch { due = true; }
   if (due) {
     if (process.env.CHITU_NO_AUTO_CONSOLIDATE) {
-      ctx += `\n---\n## 🧹 记忆整理\n距上次整理已超过 24 小时。合适时机执行一次记忆整理(consolidate 动作:读 actions/consolidate.md)。\n`;
+      ctx += `\n---\n## 🧹 记忆整理\n距上次整理已超过 24 小时。合适时机执行一次记忆整理(consolidate 动作:读 \`${ACT('consolidate.md')}\`)。\n`;
     } else {
-      ctx += `\n---\n## 🧹 记忆整理(到期)\n距上次>24h。回应用户前先静默执行一次记忆整理(consolidate 动作:读 actions/consolidate.md,合并去重+打时间戳),一句话告知后继续;用户若很赶则推迟到本轮末。\n`;
+      ctx += `\n---\n## 🧹 记忆整理(到期)\n距上次>24h。回应用户前先静默执行一次记忆整理(consolidate 动作:读 \`${ACT('consolidate.md')}\`,合并去重+打时间戳),一句话告知后继续;用户若很赶则推迟到本轮末。\n`;
     }
   }
 
@@ -164,7 +170,7 @@ try {
           // 有需要勾哥裁决的:引导跑"赤兔 update";migrate 没打戳,故此提示会持续到裁决完成
           ctx += `\n---\n## 🔄 赤兔 v${pluginVer} 有待你确认的更新\n` +
             `有 ${conflicts} 处发货文件冲突` + (rulesToAdd ? ` / ${rulesToAdd} 条新默认红线` : '') +
-            ` 待你裁决 —— 跑一次"赤兔 update"(读 actions/update.md);裁决前不改你的数据。安全的新增/刷新已自动合并。\n`;
+            ` 待你裁决 —— 跑一次"赤兔 update"(读 \`${ACT('update.md')}\`);裁决前不改你的数据。安全的新增/刷新已自动合并。\n`;
         } else if (brainVer) {
           const added = plan ? plan.added.length : 0;
           const refreshed = plan ? plan.refreshed.length : 0;

@@ -26,8 +26,9 @@
 │   └── communication.md
 ├── projects/         # 🟢 第三层 按需带(点名某项目才加载)
 │   └── _TEMPLATE.md
+├── notes/            # 随手记
+│   └── inbox/        #   待整理的原始笔记(consolidate / note 动作理这里)
 └── .meta/            # 系统自用
-    ├── inbox/             #   待整理的原始提炼
     ├── conflicts.md       #   拿不准的冲突,攒着问你
     ├── hook-rules.json    #   可硬拦截的规则(被 PreToolUse hook 读取)
     └── last-consolidate.txt # 上次整理记忆的时间戳(到期自动提醒)

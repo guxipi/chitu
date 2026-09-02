@@ -2,12 +2,14 @@
 
 目标:防止"记忆腐烂"。这是大脑长期可用的关键维护步骤(事件驱动:每次开会话若距上次 >24h 会被提醒)。
 
+> 下文命令里的 `<赤兔根>` = 赤兔插件的根目录绝对路径(SessionStart 简报开头那行"赤兔插件根:"给了,照抄它的正斜杠写法;走 /chitu 技能进来的,就是技能自我介绍里那个目录)。**先替换成真实绝对路径再执行**——它不是环境变量,原样丢给 shell 会展开成空,报 Cannot find module。
+
 ## 步骤
 
-1. **盘点**:读取 `~/.chitu/INDEX.md`、`lessons/` 下所有 `L-*.md`、以及 `.meta/inbox/`(待整理的原始提炼,若有)。
+1. **盘点**:读取 `~/.chitu/INDEX.md`、`lessons/` 下所有 `L-*.md`、以及 `notes/inbox/`(手机/随手扔进来的原始笔记,若有;note 动作也理这里)。
 
    同时用 Bash 跑一次同步盘冲突副本巡检(大脑在 Google Drive/Dropbox,多机同天写会留冲突副本):
-   `node "${CLAUDE_SKILL_DIR}/scripts/conflict-scan.js"`
+   `node "<赤兔根>/scripts/conflict-scan.js"`
    有输出 `CONFLICTS` 就把清单**念给勾哥裁决**(留哪份/删哪份),别自作主张删。
 
 2. **两阶段对账**(借鉴 mem0 的 ADD/UPDATE/DELETE/NOOP)。对每条候选/已有记忆判定:
@@ -25,10 +27,10 @@
 6. **修订索引**:更新 `INDEX.md` 使其与现状一致;确认它仍在 ≤200 行的预算内。
 
 7. **归档与重建索引**:把 `status: archived/superseded` 的 lesson 移到 `~/.chitu/lessons/archive/`(运行时不再扫,保持活跃集精简);然后运行
-   `node "${CLAUDE_SKILL_DIR}/scripts/build-index.js"` 重建编译索引。
+   `node "<赤兔根>/scripts/build-index.js"` 重建编译索引。
 
 8. **打整理时间戳**:用 Bash 工具运行
-   `node "${CLAUDE_SKILL_DIR}/scripts/stamp-consolidate.js"`
+   `node "<赤兔根>/scripts/stamp-consolidate.js"`
    (写入 `~/.chitu/.meta/last-consolidate.txt`,这样 SessionStart 的"整理到期"会重置 24 小时。)
 
 9. **汇报**:简短列出本次做了什么(合并 N 条、归档 M 条、升级 K 条、待裁决 J 条),并把 conflicts 念给用户。

@@ -46,10 +46,10 @@ git config --global mergetool.unityyamlmerge.cmd "'C:/Program Files/Unity/Hub/Ed
 git merge <branch>        # 撞了 .unity/.prefab 冲突
 git mergetool             # UnityYAMLMerge 自动合大部分,合不了的留标记
 ```
-剩余冲突按 YAML 语义手动裁决(见 `templates/brain/style/unity.md` 的「scene/prefab 冲突处置」)。
+剩余冲突按 YAML 语义手动裁决(见 `~/.chitu/style/unity.md` 的「scene/prefab 冲突处置」)。
 
 ## 验证
-`node <插件目录>/scripts/doctor.js` 的「Unity SmartMerge」项应变 ✅(它查 `.gitconfig` 里有没有 `unityyamlmerge`)。
+`node "<赤兔根>/scripts/doctor.js"`(`<赤兔根>` = 赤兔插件所在文件夹) 的「Unity SmartMerge」项应变 ✅(它查 `.gitconfig` 里有没有 `unityyamlmerge`)。
 
 ## 排错
-先跑一次 **赤兔 体检**(`node <插件目录>/scripts/doctor.js`)——它会告诉你 .gitconfig 配没配、路径对不对。
+先跑一次 **赤兔 体检**(`node "<赤兔根>/scripts/doctor.js"`,`<赤兔根>` = 赤兔插件所在文件夹)——它会告诉你 .gitconfig 配没配、路径对不对。

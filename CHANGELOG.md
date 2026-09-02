@@ -2,6 +2,24 @@
 
 > 精选高亮日志(非逐版本穷举)。最新在上。
 
+### v0.1.5 — 2026-09-02 收掉 v0.1.4 自己埋的漏判,并给"路径写错"这类问题上测试
+
+对 v0.1.4 做对抗审计时抓出的问题,主要是上一版的自伤:
+
+- **conflict-scan 的"本地大脑就跳过"是个坏设计,拆了**。它靠目录名白名单判大脑在不在同步盘,判错就整轮不扫:junction/symlink 挂进 Drive(path.resolve 不解 reparse point)、`Dropbox (Acme Corp)`、`OneDrive - Contoso` 全都漏——而这些恰恰是最会产生冲突副本的多机/多人场景。改成**永远真扫**,"在不在同步盘"只用来决定措辞;白名单顺带补了 realpath 与段前缀匹配(团队版/租户版/我的云端硬盘)。空转那点开销换不来漏判的风险。
+- **结果分两级**:带客户端标记的、以及 `name (N).ext` 且原件还在的 → `CONFLICTS`,请裁决;`name (N).ext` 但原件已不在 → `SUSPECT`,只在同步盘大脑里提一句(本地大脑的"想法 (2).md"就是正常笔记)。这样既不像 v0.1.3 之前那样误报,也不会像 v0.1.4 那样把变成孤儿的真副本永久漏掉。
+- **删掉 `/\bconflict\b/i`**:它不是任何客户端打的标记,却会把 `L-0031-merge-conflict.md` 这种正常教训报成事故、催勾哥删。改成只认 `conflicted copy` / `的冲突副本` / 括号里带 conflict 的形态。
+- **整目录被复制也报**:Drive 会整个复制出 `lessons (conflicted copy)/`,以前只看文件名,这种静默双份从来没人管。
+
+- **新测试 3.6b:文档里指向插件自身的路径必须真的存在**,启动器(.bat/.vbs)引用的同目录脚本也一样。语音那个错名撑过了三个版本、64 个绿测试都没拦住——现在把 `yide_voice.py` 改回去,测试立刻变红。1.5 也补上了同步盘识别的**正向**用例(上一版只测了否定方向,所以两个漏判 bug 照样全绿)。
+
+- **清掉最后几处路径漏网**:`templates/brain/style/unity.md`(它是发货文件,每次升级都会刷进每个用户的大脑)、`android/SETUP.md` 的 `templates/qa/EvidenceCapture.cs`、`unity-smartmerge/SETUP.md` 里指错对象的 `templates/brain/style/unity.md`(用户该看的是自己大脑里的 `~/.chitu/style/unity.md`)、voice SETUP 的三条命令。
+- **占位符统一成 `<赤兔根>`**:v0.1.4 在 SETUP.md 里新造的 `<插件目录>` 是第二套写法,并入前者,首次出现处括注"= 赤兔插件所在文件夹"。
+- **`chitu-voice-silent.vbs` 改成转调 `chitu-voice.bat`**:原来它直接 `python chitu_voice.py`,把 .bat 里设的 `CHITU_VOICE_*` 默认值全丢了;SETUP §7 也改成推荐它,不再让人另配 pythonw + 计划任务。
+- **consolidate 步骤 1 的自相矛盾**:一边让模型报"随手记压了 N 条",一边禁止它读 inbox。改成直接引用简报里已有的那个数;巡检说明也跟上新行为(`CLEAN` 是常态,`SUSPECT` 别当事故)。
+
+测试 65 全绿(新增 3.6b)。
+
 ### v0.1.4 — 2026-09-02 清掉 fork 遗留的路径坑 + consolidate 的空转与越界
 
 接着 v0.1.3 往下扫,五处都是同一类毛病:文档写的路径,模型或勾哥照着跑会扑空。

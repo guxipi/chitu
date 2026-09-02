@@ -3,11 +3,11 @@
 **目的**：在 Rider 终端跑 Claude Code/赤兔时，不打字——按一个全局热键说中文，转写完**自动键入当前光标处**（Claude Code 输入框），你审一眼再回车。
 **铁律**：常驻一个后台进程；你只做两件——按热键说话、再按热键停（或停顿自动停）。其余赤兔全自动。
 
-> 语音复用 playtest 那套 **Google Cloud Speech-to-Text（Chirp 3 · v2 流式）**：`integrations/playtest-capture/stt_google.py`。这里不重写识别，只是把它从“喂 Unity”改成“喂终端光标”。
+> 语音复用 playtest 那套 **Google Cloud Speech-to-Text（Chirp 3 · v2 流式）**：`<赤兔根>/integrations/playtest-capture/stt_google.py`。这里不重写识别，只是把它从“喂 Unity”改成“喂终端光标”。
 
 ---
 
-> 下面命令里的相对路径都以**插件根目录**为准(赤兔插件所在文件夹);在别处跑就换成绝对路径,或先 `cd` 进插件目录。
+> 命令里的 `<赤兔根>` = 赤兔插件所在文件夹的绝对路径,跑之前换成真路径(它不是环境变量)。
 
 ## 1. 装依赖（轻量，无 PyTorch）
 ```
@@ -28,14 +28,14 @@ gcloud auth application-default set-quota-project <你的GCP项目ID>
 
 ## 3. 先自检（验依赖/认证/麦克风/API，别留到用时才炸）
 ```
-python integrations\voice-prompt\chitu_voice.py --check
+python "<赤兔根>/integrations/voice-prompt/chitu_voice.py" --check
 ```
 打印一串 ✓ 且最后 `API 可达` 即就绪；有 ✗ 按提示修。
 
 ## 4. 启动常驻热键
-双击 `integrations\voice-prompt\chitu-voice.bat`，或终端跑：
+双击 `<赤兔根>/integrations/voice-prompt/chitu-voice.bat`，或终端跑：
 ```
-python integrations\voice-prompt\chitu_voice.py
+python "<赤兔根>/integrations/voice-prompt/chitu_voice.py"
 ```
 看到 `✓ 就绪。热键：<ctrl>+<f9> …` 即可。**让这个窗口一直开着**（最小化即可）。
 
@@ -58,7 +58,7 @@ python integrations\voice-prompt\chitu_voice.py
 
 ## 7. 开机自启（可选）
 按 `Win+R` 输 `shell:startup` 回车 → 把 `chitu-voice.bat` 的**快捷方式**拖进去。下次开机自动常驻。
-（想静默后台、不弹黑窗，可改用 `pythonw` + 计划任务；先用 .bat 跑顺了再说。）
+（想静默后台、不弹黑窗：把同目录的 `chitu-voice-silent.vbs` 的快捷方式放进 shell:startup —— 它转手调 chitu-voice.bat，环境变量默认值照样生效。）
 
 ## 8. 隐私
 录的是你的麦克风，音频流到 Google Cloud 转写（走你 GCP 项目的数据条款）；不想说话就照常打字。录音 wav 默认键入后即删。
@@ -72,4 +72,4 @@ python integrations\voice-prompt\chitu_voice.py
 ## 10. 验证边界（诚实，未替你跑过）
 确定性部分（拉起子进程、解析 JSON、SendInput 调用）是代码逻辑；但 **① 全局热键在你机器上能捕获、② 麦克风、③ Google 流式出中文、④ SendInput 把中文打进 Rider 终端的 Claude Code 输入框** 这四环必须在你真 Windows + 真环境端到端验一次。尤其第 ④ 环：个别终端/输入法对 Unicode 注入处理不同，第一次务必亲测一句。赤兔没在你机器上跑过，不冒充已验证。
 
-> **连不上 / 没生效?** 先跑一次 **赤兔 体检**(`node <插件目录>/scripts/doctor.js`)自查,再深挖。
+> **连不上 / 没生效?** 先跑一次 **赤兔 体检**(`node "<赤兔根>/scripts/doctor.js"`,`<赤兔根>` = 赤兔插件所在文件夹)自查,再深挖。

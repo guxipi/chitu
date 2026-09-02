@@ -17,7 +17,7 @@
    ```
    python "<赤兔根>/integrations/voice-prompt/chitu_voice.py"
    ```
-   或双击 `<赤兔根>\integrations\voice-prompt\chitu-voice.bat`(资源管理器里打开插件目录找它)。
+   或双击 `<赤兔根>/integrations/voice-prompt/chitu-voice.bat`(资源管理器里打开插件目录找它)。
 3. **用法**一句话讲清:光标停在 Claude Code 输入框 → 按 **Ctrl+F9** 说中文 → 再按一次停(或停顿 ~6s 自动停)→ 中文自动键入 → 自己回车。
 
 ## 规则

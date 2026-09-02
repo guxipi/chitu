@@ -65,7 +65,7 @@ AI 常因训练数据混版本而给出过时接口:
 - **频繁显隐别狂 `SetActive`**:用对象池或 `CanvasGroup.alpha`/移出屏幕替代。
 
 ## 8. scene/prefab 合并冲突处置(Git 管 Unity 的头号日常痛)
-- **先上 SmartMerge**:配好 UnityYAMLMerge 后(见 `integrations/unity-smartmerge/SETUP.md`),撞 `.unity`/`.prefab` 冲突先 `git mergetool` —— 它按 YAML 语义自动合大部分,只把真冲突留给你。
+- **先上 SmartMerge**:配好 UnityYAMLMerge 后(见 `<赤兔根>/integrations/unity-smartmerge/SETUP.md`,`<赤兔根>` = 简报开头那行"赤兔插件根:"的绝对路径),撞 `.unity`/`.prefab` 冲突先 `git mergetool` —— 它按 YAML 语义自动合大部分,只把真冲突留给你。
 - **剩余冲突按 YAML 块裁决,别按文本行**:Unity YAML 每个对象是一个 `--- !u!<classID> &<fileID>` 块。看冲突落在哪个 fileID / 组件块,按"这个对象两边各改了什么"整块取舍,而不是逐行拼。
 - **绝不手瞎删 `--- !u!` 块**:删一个块 = 删一个 GameObject/Component,还会留下别处对它 `{fileID: ...}` 的悬空引用(打开就丢组件/报错)。宁可保留两份再在 Editor 里删多的。
 - **`.meta` 冲突**:冲突多在 `guid`(两边各自 import 生成)——**保留任一方的 guid 即可,但全项目要一致**;别两个资产撞同一 guid。`.meta` 内其它字段(importer 设置)按需取。

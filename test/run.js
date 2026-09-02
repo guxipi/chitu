@@ -394,26 +394,39 @@ t('1.4 顶层 catch 给降级简报而非静默 exit;SessionStart timeout ≥15s
   const h = JSON.parse(fs.readFileSync(path.join(ROOT, 'hooks', 'hooks.json'), 'utf8'));
   assert(h.hooks.SessionStart[0].hooks[0].timeout >= 15, 'SessionStart timeout 应 ≥15s');
 });
-t('1.5 冲突副本巡检:标记副本命中、数字副本要原件还在、跳过 archive、本地大脑不算同步盘', () => {
-  const { findConflicts, isConflictName, numberedDupOrigin, isSyncedPath } = require(path.join(SCRIPTS, 'conflict-scan.js'));
+t('1.5 冲突副本巡检:标记/数字副本分级、目录副本、archive 跳过、同步盘识别双向', () => {
+  const { scan, findConflicts, isConflictName, numberedDupOrigin, isSyncedPath } = require(path.join(SCRIPTS, 'conflict-scan.js'));
   assert(isConflictName('identity (conflicted copy 2026-07-02).md'), '英文冲突副本');
   assert(isConflictName('教训的冲突副本.md'), '中文冲突副本');
   assert(!isConflictName('note (1).md'), '光看名字不判数字副本(会误伤正常笔记)');
+  assert(!isConflictName('L-0031-merge-conflict.md'), '正常的 merge conflict 笔记不该被当成同步盘副本');
   assert(numberedDupOrigin('note (1).md') === 'note.md', '数字副本能推出原件名');
   assert(!isConflictName('normal.md'), '正常文件不命中');
   const cb = path.join(TMP, 'conflictbrain');
   fs.mkdirSync(path.join(cb, 'lessons', 'archive'), { recursive: true });
   fs.mkdirSync(path.join(cb, 'notes', 'inbox'), { recursive: true });
+  fs.mkdirSync(path.join(cb, 'lessons (conflicted copy)'), { recursive: true });
+  fs.writeFileSync(path.join(cb, 'lessons (conflicted copy)', 'L-z.md'), 'z');
   fs.writeFileSync(path.join(cb, 'lessons', 'L-x (1).md'), 'x');
   fs.writeFileSync(path.join(cb, 'lessons', 'L-x.md'), 'x');   // 原件还在 → 上面那份才算副本
   fs.writeFileSync(path.join(cb, 'lessons', 'L-y.md'), 'y');
-  fs.writeFileSync(path.join(cb, 'notes', 'inbox', '想法 (2).md'), 'n');  // 没有原件 = 正常笔记
+  fs.writeFileSync(path.join(cb, 'notes', 'inbox', '想法 (2).md'), 'n');  // 没有原件 = 可疑,不是事故
   fs.writeFileSync(path.join(cb, 'lessons', 'archive', 'old (conflicted copy).md'), 'z');
-  const hits = findConflicts(cb).map(p => path.basename(p));
-  assert(hits.includes('L-x (1).md'), '原件还在的数字副本应命中');
-  assert(!hits.includes('想法 (2).md'), '没有原件的 (N) 是正常笔记,不该误报');
-  assert(!hits.some(h => /old/.test(h)), 'archive 区应跳过');
-  assert(!isSyncedPath(cb), '本机临时目录不算同步盘(CLI 会跳过巡检)');
+  const { sure, suspect } = scan(cb);
+  const S = sure.map(p => path.basename(p)), Q = suspect.map(p => path.basename(p));
+  assert(S.includes('L-x (1).md'), '原件还在的数字副本应算确定副本');
+  assert(S.includes('lessons (conflicted copy)'), '整目录被复制也要报');
+  assert(Q.includes('想法 (2).md'), '没有原件的 (N) 归可疑,不进裁决清单');
+  assert(!S.includes('想法 (2).md'), '可疑项不该混进确定清单');
+  assert(!S.some(h => /old/.test(h)), 'archive 区应跳过');
+  assert(findConflicts(cb).length === sure.length, '老接口 findConflicts 仍只给确定的那批');
+  // 同步盘识别:漏判比误判危险,正向必须覆盖到团队版/租户版目录名
+  assert(!isSyncedPath(cb), '本机临时目录不算同步盘');
+  for (const seg of ['My Drive', 'Dropbox (Acme Corp)', 'OneDrive - Contoso', 'Google Drive']) {
+    const d = path.join(TMP, 'syncroots', seg, 'chitu-brain');
+    fs.mkdirSync(d, { recursive: true });
+    assert(isSyncedPath(d), `"${seg}" 下的大脑应认成同步盘`);
+  }
 });
 
 // === 8e. 文档一致性 + skill 引用体检(2026-07-02 audit Phase 3)===
@@ -426,6 +439,50 @@ t('3.6 动作数一致:actions/*.md == README 动作表行 == 根 SKILL 路由�
   assert(actions === routeFiles.length, `SKILL 路由 ${routeFiles.length} 行 ≠ actions/*.md ${actions} 个`);
   for (const a of routeFiles) assert(fs.existsSync(path.join(ROOT, 'actions', a + '.md')), `SKILL 路由指向不存在的 actions/${a}.md`);
   assert(!/figma[^-]/i.test(skill.split('---')[2] || ''), '根 SKILL description 不应再宣传 figma 动作(figma 是 skill)');
+});
+t('3.6b 文档里指向插件自身的路径必须真的存在(防"改了内容没改文件名"那类)', () => {
+  // 收集所有面向模型/勾哥的文档
+  const docs = [];
+  const push = (p) => { if (fs.existsSync(p)) docs.push(p); };
+  for (const f of fs.readdirSync(path.join(ROOT, 'actions'))) if (f.endsWith('.md')) push(path.join(ROOT, 'actions', f));
+  for (const d of fs.readdirSync(path.join(ROOT, 'skills'))) push(path.join(ROOT, 'skills', d, 'SKILL.md'));
+  for (const d of fs.readdirSync(path.join(ROOT, 'integrations'))) push(path.join(ROOT, 'integrations', d, 'SETUP.md'));
+  const walkMd = (dir) => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name); if (e.isDirectory()) walkMd(p); else if (e.name.endsWith('.md')) docs.push(p); } };
+  walkMd(path.join(ROOT, 'templates', 'brain'));
+
+  // `<赤兔根>/xxx` 形式的引用:去掉通配与占位后必须存在
+  const RE = /<赤兔根>[\/\\]([A-Za-z0-9_.\-][A-Za-z0-9_.\-\/\\]*)/g;
+  const missing = [];
+  for (const p of docs) {
+    const s = fs.readFileSync(p, 'utf8');
+    for (const m of s.matchAll(RE)) {
+      let rel = m[1].replace(/[`)。,、;:]+$/, '');
+      if (/[*<]/.test(rel)) continue;                       // 通配 / <file> 占位跳过
+      const abs = path.join(ROOT, rel.replace(/\\/g, '/'));
+      if (!fs.existsSync(abs)) missing.push(`${path.relative(ROOT, p)} → ${rel}`);
+    }
+  }
+  assert(!missing.length, '文档指向不存在的插件文件:\n  ' + missing.join('\n  '));
+
+  // 启动器(.bat/.vbs)引用的同目录脚本必须存在 —— 语音那次就是内容改名了、文件没改名
+  const launchers = [];
+  const walkBin = (dir) => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name); if (e.isDirectory()) walkBin(p); else if (/\.(bat|vbs)$/i.test(e.name)) launchers.push(p); } };
+  walkBin(path.join(ROOT, 'integrations'));
+  const badLaunch = [];
+  for (const p of launchers) {
+    for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+      const t = line.trim();
+      if (/^(rem\b|::|')/i.test(t)) continue;                 // .bat / .vbs 注释不算引用
+      // 只看真正拼路径的两种写法:%~dp0<name>(bat)、& here & "<name>"(vbs)
+      for (const m of t.matchAll(/(?:%~dp0|&\s*")([A-Za-z0-9_.\-]+\.(?:py|bat|cmd))/g)) {
+        const name = m[1];
+        if (!fs.existsSync(path.join(path.dirname(p), name))) badLaunch.push(`${path.relative(ROOT, p)} → ${name}`);
+      }
+    }
+  }
+  assert(!badLaunch.length, '启动器引用了同目录不存在的脚本:\n  ' + badLaunch.join('\n  '));
 });
 t('3.7 lint-skill-refs:命中悬空引用、跳过占位/无根', () => {
   const { lintRefs, extractRefs } = require(path.join(SCRIPTS, 'lint-skill-refs.js'));

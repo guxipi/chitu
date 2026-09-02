@@ -17,7 +17,7 @@
 4. 电脑终端输 `adb devices`——列表里看到你的手机(device)就连上了。
 
 ## 3.(推荐)放一个"自动留证据"脚本
-把 `templates/qa/EvidenceCapture.cs` 放进你的 Unity 项目。它会在**游戏任何报错时,自动把 截图 + 完整日志 + 机型**存进手机。
+把 `<赤兔根>/templates/qa/EvidenceCapture.cs` 放进你的 Unity 项目。它会在**游戏任何报错时,自动把 截图 + 完整日志 + 机型**存进手机。
 - **重要**:用 `#if DEVELOPMENT_BUILD`(或你自己的测试宏)把它包起来,**只在开发/测试包里开,别进正式上线包**(省性能、避隐私)。
 - 出测试包时勾上 Unity 的 **Development Build** 即可。
 
@@ -34,4 +34,4 @@
 
 **安全**:赤兔只会用**只读 adb**(`adb devices` / `adb logcat` / `adb pull`)取证,这些已自动放行、不弹审批;`adb shell` 这类能动手机的命令赤兔不碰、真要用也会先问你。
 
-> **连不上 / 没生效?** 先跑一次 **赤兔 体检**(`node <插件目录>/scripts/doctor.js`)自查(含 adb 是否在 PATH),再深挖。
+> **连不上 / 没生效?** 先跑一次 **赤兔 体检**(`node "<赤兔根>/scripts/doctor.js"`,`<赤兔根>` = 赤兔插件所在文件夹)自查(含 adb 是否在 PATH),再深挖。

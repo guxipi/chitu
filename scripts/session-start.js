@@ -11,6 +11,7 @@ const { countActive } = require(path.join(__dirname, 'lessons.js'));
 const { syncExperts } = require(path.join(__dirname, 'sync-experts.js'));
 const store = require(path.join(__dirname, 'store.js'));
 const { resolve } = require(path.join(__dirname, 'resolve.js'));
+const sessionTitle = require(path.join(__dirname, 'session-title.js'));
 
 // a < b ?(semver,缺位按 0)
 function verLt(a, b) {
@@ -29,9 +30,16 @@ const ROOT_TXT = SLASH(PLUGIN_ROOT);
 // 动作文件一律给完整绝对路径:模型的 cwd 是业务工程,注入里写 actions/xxx.md 它找不到。
 const ACT = (f) => SLASH(path.join(PLUGIN_ROOT, 'actions', f));
 
+// hook 输入里的 session_id:会话命名按会话存(见 session-title.js)。读不到就退化成 nosid,标题保持原样。
+let SESSION_ID = 'nosid';
+try { SESSION_ID = (JSON.parse(fs.readFileSync(0, 'utf8') || '{}').session_id) || 'nosid'; } catch {}
+
 function emit(ctx, title) {
+  // 标题 = "<目标名>_<底标>":底标首次记下后 resume/compact 不换日期,已起过的目标名带回来。
+  let t = title || '';
+  try { t = sessionTitle.forStart(SESSION_ID, t); } catch {}
   process.stdout.write(JSON.stringify({
-    hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: ctx, sessionTitle: title || '' },
+    hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: ctx, sessionTitle: t },
   }));
 }
 function read(rel, base) {

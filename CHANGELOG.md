@@ -2,6 +2,10 @@
 
 > 精选高亮日志(非逐版本穷举)。最新在上。
 
+### v0.1.6 — 2026-10-15 会话按主要目标命名
+
+会话标题从固定的"🐎 赤兔已就位 · 日期"改成"<目标名>_🐎 赤兔已就位 · 日期",底标和日期原样保留(新增 scripts/session-title.js)。首句先从 prompt 粗取一个名字,同时提醒模型按主要目标起 2-8 字正式名并跑 `session-title.js set`,下一句生效(Claude Code 只在 SessionStart / UserPromptSubmit 认 sessionTitle)。SessionStart 现在读 hook 输入里的 session_id;resume / compact 不再把标题打回当天日期。状态落 ~/.chitu-local/session-titles.json。
+
 ### v0.1.5 — 2026-09-02 收掉 v0.1.4 自己埋的漏判,并给"路径写错"这类问题上测试
 
 对 v0.1.4 做对抗审计时抓出的问题,主要是上一版的自伤:
